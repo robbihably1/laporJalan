@@ -49,12 +49,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const res = await authApi.register(userData);
-      if (res.token) {
-        localStorage.setItem('laporjalan_token', res.token);
-      }
-      if (res.success && res.user) {
-        setUser(res.user);
-      }
+      // DO NOT set user session upon registration because account status is 'Nonaktif' (Requires Email Verification)
       setLoading(false);
       return res;
     } catch (err) {
@@ -70,7 +65,6 @@ export const AuthProvider = ({ children }) => {
       if (res.success && res.user) {
         setUser(res.user);
       } else {
-        // Fallback update local state
         setUser(prev => prev ? { ...prev, ...profileData } : null);
       }
       setLoading(false);

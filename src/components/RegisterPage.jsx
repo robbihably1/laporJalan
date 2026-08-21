@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
-  MapPin, ShieldAlert, Camera, ArrowRight, CheckCircle2, 
+  MapPin, Camera, ArrowRight, CheckCircle2, 
   UserCheck, Sparkles, UserPlus, FileText, Lock, Mail, Phone, Building2 
 } from 'lucide-react';
 
-export default function RegisterPage({ onSwitchToLogin }) {
+export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted }) {
   const { register } = useAuth();
   
   const [name, setName] = useState('');
@@ -32,7 +32,7 @@ export default function RegisterPage({ onSwitchToLogin }) {
     setIsLoading(true);
 
     try {
-      await register({
+      const res = await register({
         name,
         nik,
         email,
@@ -40,7 +40,21 @@ export default function RegisterPage({ onSwitchToLogin }) {
         city,
         password
       });
+
       setIsLoading(false);
+
+      if (res && res.success === false) {
+        setErrorMsg(res.message || 'Gagal mendaftar akun baru');
+        return;
+      }
+
+      // Pass email & token to parent component to render Email Verification Page
+      if (onRegistrationSubmitted) {
+        onRegistrationSubmitted({
+          email: res?.email || email,
+          token: res?.token || 'vtoken_sample'
+        });
+      }
     } catch (err) {
       setErrorMsg(err.message || 'Gagal mendaftar akun baru');
       setIsLoading(false);
@@ -92,8 +106,8 @@ export default function RegisterPage({ onSwitchToLogin }) {
                 <UserCheck className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-white">Sesi Akun Pribadi</h4>
-                <p className="text-xs text-slate-400">Riwayat laporan & profil Anda terhubung khusus ke akun Anda</p>
+                <h4 className="text-sm font-semibold text-white">Verifikasi Email Keaktifan Akun</h4>
+                <p className="text-xs text-slate-400">Default akun berstatus Nonaktif hingga email diverifikasi</p>
               </div>
             </div>
           </div>

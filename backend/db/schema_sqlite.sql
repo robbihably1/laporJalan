@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
     phone TEXT,
     avatar TEXT,
     city TEXT,
-    status TEXT NOT NULL DEFAULT 'Aktif',
+    status TEXT NOT NULL DEFAULT 'Nonaktif',
+    verification_token TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

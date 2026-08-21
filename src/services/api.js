@@ -61,6 +61,19 @@ export const authApi = {
       body: JSON.stringify(profileData),
     });
   },
+
+  verifyEmail: async (token) => {
+    return fetchApi(`/auth/verify-email?token=${token}`, {
+      method: 'GET',
+    });
+  },
+
+  checkVerificationStatus: async (email, token) => {
+    const query = email ? `email=${encodeURIComponent(email)}` : `token=${encodeURIComponent(token)}`;
+    return fetchApi(`/auth/check-verification?${query}`, {
+      method: 'GET',
+    });
+  },
 };
 
 // ----------------------------------------------------

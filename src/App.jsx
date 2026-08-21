@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ReportProvider } from './context/ReportContext';
+import { authApi } from './services/api';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
+import EmailVerificationPage from './components/EmailVerificationPage';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import AddReportForm from './components/AddReportForm';
@@ -15,7 +17,24 @@ function MainAppContent() {
   const isAdmin = user?.role === 'admin';
 
   const [activeTab, setActiveTab] = useState('add'); // 'add', 'history', 'map', 'users'
-  const [authView, setAuthView] = useState('login'); // 'login' or 'register'
+  const [authView, setAuthView] = useState('login'); // 'login', 'register', 'verify'
+  const [pendingVerification, setPendingVerification] = useState({ email: '', token: '' });
+
+  // Handle URL Query Parameter for Direct Email Activation Link (?verify_token=...)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const verifyToken = urlParams.get('verify_token') || urlParams.get('token');
+
+    if (verifyToken) {
+      authApi.verifyEmail(verifyToken).then(() => {
+        // Clean URL query parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setAuthView('login');
+      }).catch(() => {
+        setAuthView('login');
+      });
+    }
+  }, []);
 
   // Set default tab when admin logs in
   useEffect(() => {
@@ -24,13 +43,35 @@ function MainAppContent() {
     }
   }, [isAdmin, activeTab]);
 
+  // Unauthenticated Auth Routing Views
   if (!isAuthenticated) {
     if (authView === 'register') {
-      return <RegisterPage onSwitchToLogin={() => setAuthView('login')} />;
+      return (
+        <RegisterPage
+          onSwitchToLogin={() => setAuthView('login')}
+          onRegistrationSubmitted={({ email, token }) => {
+            setPendingVerification({ email, token });
+            setAuthView('verify');
+          }}
+        />
+      );
     }
+
+    if (authView === 'verify') {
+      return (
+        <EmailVerificationPage
+          email={pendingVerification.email}
+          token={pendingVerification.token}
+          onVerificationSuccess={() => setAuthView('login')}
+          onBackToLogin={() => setAuthView('login')}
+        />
+      );
+    }
+
     return <LoginPage onSwitchToRegister={() => setAuthView('register')} />;
   }
 
+  // Authenticated Main Application Views
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col pb-20 md:pb-10 selection:bg-sky-500 selection:text-white">
       {/* Top Navbar Header */}

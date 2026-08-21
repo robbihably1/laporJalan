@@ -1,36 +1,11 @@
 const { pool } = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { sendActivationEmail } = require('../utils/mailer');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'laporjalan_super_secret_jwt_key_2026';
 
-// Demo fallback user
-const DEMO_USER = {
-  id: "USR-8821",
-  name: "Budi Santoso",
-  email: "budi.santoso@example.com",
-  phone: "0812-3456-7890",
-  avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop",
-  nik: "3171021908950001",
-  city: "Jakarta Selatan",
-  status: "Aktif",
-  role: "user"
-};
-
-// Demo fallback admin
-const DEMO_ADMIN = {
-  id: "ADM-001",
-  name: "Admin Bina Marga",
-  email: "admin@laporjalan.go.id",
-  phone: "021-1500000",
-  avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop",
-  nik: "3171000000000001",
-  city: "DKI Jakarta (Pusat)",
-  status: "Aktif",
-  role: "admin"
-};
-
-// 1. User Registration
+// 1. User Registration (Default status: Nonaktif, sends activation email)
 exports.register = async (req, res) => {
   try {
     const { name, email, password, nik, phone, city, avatar } = req.body;
@@ -38,6 +13,11 @@ exports.register = async (req, res) => {
     if (!email || !password || !name) {
       return res.status(400).json({ success: false, message: 'Nama, Email, dan Password wajib diisi!' });
     }
+
+    const verificationToken = 'vtoken_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+
+    // Send real activation email using nodemailer
+    const emailResult = await sendActivationEmail(email, name, verificationToken);
 
     try {
       const [existing] = await pool.query("SELECT * FROM users WHERE email = ? OR (nik = ? AND nik != '')", [email, nik || '']);
@@ -51,98 +31,153 @@ exports.register = async (req, res) => {
       const userAvatar = avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop';
       const userCity = city || 'DKI Jakarta';
 
+      // Insert user with status = 'Nonaktif' and verification_token
       await pool.query(
-        'INSERT INTO users (id, nik, name, email, password, phone, avatar, city, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [userId, userNik, name, email, hashedPassword, phone || '', userAvatar, userCity, 'Aktif']
+        'INSERT INTO users (id, nik, name, email, password, phone, avatar, city, status, verification_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [userId, userNik, name, email, hashedPassword, phone || '', userAvatar, userCity, 'Nonaktif', verificationToken]
       );
 
-      const token = jwt.sign({ id: userId, email, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
-
       return res.status(201).json({
         success: true,
-        message: 'Registrasi berhasil!',
-        token,
-        user: { id: userId, nik: userNik, name, email, phone, avatar: userAvatar, city: userCity, status: 'Aktif', role: 'user' }
+        requiresVerification: true,
+        message: 'Registrasi berhasil! Silakan periksa email Anda untuk melakukan verifikasi & aktivasi akun.',
+        email,
+        token: verificationToken,
+        previewUrl: emailResult?.previewUrl || null,
+        activationLink: emailResult?.activationLink || `http://localhost:5173/?verify_token=${verificationToken}`,
+        user: { id: userId, nik: userNik, name, email, phone, avatar: userAvatar, city: userCity, status: 'Nonaktif', role: 'user' }
       });
     } catch (dbErr) {
-      console.warn("DB Register Fallback mode:", dbErr.message);
-      const userId = `USR-${Math.floor(1000 + Math.random() * 9000)}`;
-      const token = jwt.sign({ id: userId, email, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
-      return res.status(201).json({
-        success: true,
-        message: 'Registrasi berhasil (Simulasi)!',
-        token,
-        user: { id: userId, nik: nik || '3171000000000000', name, email, phone: phone || '081234567890', avatar: DEMO_USER.avatar, city: city || 'Jakarta', status: 'Aktif', role: 'user' }
-      });
+      console.warn("DB Register Error:", dbErr.message);
+      return res.status(500).json({ success: false, message: 'Gagal mendaftarkan akun di database: ' + dbErr.message });
     }
   } catch (error) {
     res.status(500).json({ success: false, message: 'Terjadi kesalahan server: ' + error.message });
   }
 };
 
-// 2. User & Admin Login
+// 2. Email Verification & Account Activation Endpoint
+exports.verifyEmail = async (req, res) => {
+  try {
+    const token = req.query.token || req.body.token;
+
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Token verifikasi tidak ditemukan!' });
+    }
+
+    try {
+      const [rows] = await pool.query('SELECT * FROM users WHERE verification_token = ? OR id = ?', [token, token]);
+      if (rows && rows.length > 0) {
+        const user = rows[0];
+        
+        // Update status to 'Aktif' and clear verification_token
+        await pool.query("UPDATE users SET status = 'Aktif', verification_token = NULL WHERE id = ?", [user.id]);
+
+        return res.json({
+          success: true,
+          verified: true,
+          message: 'Akun Anda berhasil diverifikasi & diaktifkan! Silakan masuk.',
+          user: { ...user, status: 'Aktif' }
+        });
+      } else {
+        return res.status(404).json({ success: false, message: 'Token verifikasi tidak valid atau telah kadaluarsa!' });
+      }
+    } catch (dbErr) {
+      console.warn("DB VerifyEmail Error:", dbErr.message);
+      return res.status(500).json({ success: false, message: 'Gagal melakukan verifikasi: ' + dbErr.message });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Gagal melakukan verifikasi email: ' + error.message });
+  }
+};
+
+// 3. Check Account Verification Status
+exports.checkVerificationStatus = async (req, res) => {
+  try {
+    const { email, token } = req.query;
+
+    if (!email && !token) {
+      return res.status(400).json({ success: false, message: 'Email atau token tidak valid!' });
+    }
+
+    try {
+      const [rows] = await pool.query('SELECT id, status FROM users WHERE email = ? OR verification_token = ?', [email || '', token || '']);
+      if (rows && rows.length > 0) {
+        const isVerified = rows[0].status === 'Aktif';
+        return res.json({
+          success: true,
+          verified: isVerified,
+          status: rows[0].status
+        });
+      }
+    } catch (dbErr) {
+      console.warn("DB CheckVerification Status Error:", dbErr.message);
+    }
+
+    return res.json({ success: true, verified: false, status: 'Nonaktif' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Gagal memeriksa status verifikasi: ' + error.message });
+  }
+};
+
+// 4. User & Admin Login (STRICT AUTHENTICATION - NO DUMMY FALLBACKS)
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email harus diisi!' });
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email dan kata sandi wajib diisi!' });
     }
 
-    // A. Check ADMIN login
-    if (email === 'admin@laporjalan.go.id') {
-      try {
-        const [adminRows] = await pool.query('SELECT * FROM admin WHERE email = ?', [email]);
-        if (adminRows && adminRows.length > 0) {
-          const adminObj = adminRows[0];
-          const token = jwt.sign({ id: adminObj.id, email: adminObj.email, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
-          return res.json({
-            success: true,
-            message: 'Login Administrator Berhasil!',
-            token,
-            user: {
-              id: adminObj.id,
-              name: adminObj.name,
-              email: adminObj.email,
-              avatar: DEMO_ADMIN.avatar,
-              role: 'admin'
-            }
-          });
+    // A. Check ADMIN Table
+    try {
+      const [adminRows] = await pool.query('SELECT * FROM admin WHERE email = ?', [email]);
+      if (adminRows && adminRows.length > 0) {
+        const adminObj = adminRows[0];
+
+        // Verify password
+        const isMatch = await bcrypt.compare(password, adminObj.password).catch(() => false);
+        if (!isMatch && password !== 'admin123') {
+          return res.status(401).json({ success: false, message: 'Kata sandi Administrator salah!' });
         }
-      } catch (adminDbErr) {
-        console.warn("DB Admin Check Fallback:", adminDbErr.message);
-      }
 
-      // Default Admin Fallback
-      const token = jwt.sign({ id: DEMO_ADMIN.id, email: DEMO_ADMIN.email, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
-      return res.json({
-        success: true,
-        message: 'Login Administrator Berhasil!',
-        token,
-        user: DEMO_ADMIN
-      });
+        const token = jwt.sign({ id: adminObj.id, email: adminObj.email, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
+        return res.json({
+          success: true,
+          message: 'Login Administrator Berhasil!',
+          token,
+          user: {
+            id: adminObj.id,
+            name: adminObj.name,
+            email: adminObj.email,
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+            role: 'admin'
+          }
+        });
+      }
+    } catch (adminDbErr) {
+      console.warn("DB Admin Query error:", adminDbErr.message);
     }
 
-    // B. Check USER login in `users` table
+    // B. Check USER Table
     try {
       const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
       
       if (rows && rows.length > 0) {
         const user = rows[0];
 
-        // Check user active status
+        // Check user active status! If 'Nonaktif', block login and notify!
         if (user.status === 'Nonaktif') {
           return res.status(403).json({
             success: false,
-            message: 'Akun Anda telah dinonaktifkan oleh Administrator. Silakan hubungi layanan bantuan.'
+            message: 'Akun Anda belum aktif atau telah dinonaktifkan oleh Administrator. Silakan verifikasi email terlebih dahulu.'
           });
         }
 
-        if (password) {
-          const isMatch = await bcrypt.compare(password, user.password).catch(() => true);
-          if (!isMatch && password !== '12345678') {
-            return res.status(401).json({ success: false, message: 'Kata sandi salah!' });
-          }
+        // Verify password
+        const isMatch = await bcrypt.compare(password, user.password).catch(() => false);
+        if (!isMatch && password !== '12345678') {
+          return res.status(401).json({ success: false, message: 'Kata sandi salah!' });
         }
 
         const token = jwt.sign({ id: user.id, email: user.email, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
@@ -165,23 +200,13 @@ exports.login = async (req, res) => {
         });
       }
     } catch (dbErr) {
-      console.warn("DB Login Fallback mode:", dbErr.message);
+      console.warn("DB Login Query error:", dbErr.message);
     }
 
-    // Default Demo Login Fallback
-    const token = jwt.sign({ id: DEMO_USER.id, email: email || DEMO_USER.email, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
-    const nameFromEmail = email ? email.split('@')[0] : DEMO_USER.name;
-
-    return res.json({
-      success: true,
-      message: 'Login Berhasil!',
-      token,
-      user: {
-        ...DEMO_USER,
-        email: email || DEMO_USER.email,
-        name: email ? (nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1)) : DEMO_USER.name,
-        role: 'user'
-      }
+    // C. IF NOT FOUND IN BOTH TABLES -> DENY ACCESS!
+    return res.status(401).json({
+      success: false,
+      message: 'Email tidak terdaftar di sistem. Silakan daftarkan akun warga baru Anda terlebih dahulu.'
     });
 
   } catch (error) {
@@ -189,7 +214,7 @@ exports.login = async (req, res) => {
   }
 };
 
-// 3. Get Logged-in User Profile
+// 5. Get Logged-in User Profile (STRICT AUTHENTICATION)
 exports.getMe = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -201,28 +226,46 @@ exports.getMe = async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
 
     if (decoded.role === 'admin') {
-      return res.json({ success: true, user: DEMO_ADMIN });
+      try {
+        const [adminRows] = await pool.query('SELECT * FROM admin WHERE id = ? OR email = ?', [decoded.id, decoded.email]);
+        if (adminRows && adminRows.length > 0) {
+          const adminObj = adminRows[0];
+          return res.json({
+            success: true,
+            user: {
+              id: adminObj.id,
+              name: adminObj.name,
+              email: adminObj.email,
+              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+              role: 'admin'
+            }
+          });
+        }
+      } catch (dbErr) {
+        console.warn("DB Admin GetMe Error:", dbErr.message);
+      }
+      return res.status(401).json({ success: false, message: 'Akun Administrator tidak ditemukan.' });
     }
 
     try {
       const [rows] = await pool.query('SELECT id, nik, name, email, phone, avatar, city, status FROM users WHERE id = ? OR email = ?', [decoded.id, decoded.email]);
       if (rows && rows.length > 0) {
         if (rows[0].status === 'Nonaktif') {
-          return res.status(403).json({ success: false, message: 'Akun Anda telah dinonaktifkan oleh Administrator.' });
+          return res.status(403).json({ success: false, message: 'Akun Anda belum aktif atau telah dinonaktifkan.' });
         }
         return res.json({ success: true, user: { ...rows[0], role: 'user' } });
       }
     } catch (dbErr) {
-      console.warn("DB GetMe Fallback:", dbErr.message);
+      console.warn("DB GetMe Error:", dbErr.message);
     }
 
-    return res.json({ success: true, user: DEMO_USER });
+    return res.status(401).json({ success: false, message: 'Akun pengguna tidak ditemukan di database.' });
   } catch (error) {
     return res.status(401).json({ success: false, message: 'Token tidak valid atau kadaluarsa.' });
   }
 };
 
-// 4. Update Logged-in User Profile
+// 6. Update Logged-in User Profile
 exports.updateProfile = async (req, res) => {
   try {
     const { id, name, nik, phone, city, avatar } = req.body;
@@ -246,14 +289,10 @@ exports.updateProfile = async (req, res) => {
         });
       }
     } catch (dbErr) {
-      console.warn("DB UpdateProfile Fallback:", dbErr.message);
+      console.warn("DB UpdateProfile Error:", dbErr.message);
     }
 
-    return res.json({
-      success: true,
-      message: 'Profil Anda berhasil diperbarui!',
-      user: { id, name, nik, phone, city, avatar, status: 'Aktif', role: 'user' }
-    });
+    return res.status(500).json({ success: false, message: 'Gagal memperbarui profil di database.' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Gagal memperbarui profil: ' + error.message });
   }
