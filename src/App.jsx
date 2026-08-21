@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ReportProvider } from './context/ReportContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { authApi } from './services/api';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
@@ -82,7 +83,7 @@ function MainAppContent() {
 
   // Authenticated Main Application Views
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col pb-20 md:pb-10 selection:bg-sky-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col pb-20 md:pb-10 selection:bg-sky-500 selection:text-white transition-colors duration-300">
       {/* Top Navbar Header */}
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
 
@@ -125,10 +126,12 @@ function MainAppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ReportProvider>
-        <MainAppContent />
-      </ReportProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ReportProvider>
+          <MainAppContent />
+        </ReportProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

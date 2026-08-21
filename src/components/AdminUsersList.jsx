@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { adminApi } from '../services/api';
 import { 
   Users, Search, Filter, Eye, UserCheck, UserX, 
@@ -78,6 +79,120 @@ export default function AdminUsersList() {
 
   const displayedUsers = filteredUsers.slice(0, visibleCount);
 
+  // USER DETAIL MODAL Content via Portal
+  const renderUserDetailModal = () => {
+    if (!selectedUser) return null;
+
+    const modalContent = (
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in modal-backdrop-overlay">
+        <div className="glass-card w-full max-w-lg rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl text-slate-100 my-auto">
+          
+          {/* Header */}
+          <div className="p-5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-indigo-400" />
+              <h3 className="text-base font-bold text-slate-100">Detail Informasi Warga</h3>
+            </div>
+            <button
+              onClick={() => setSelectedUser(null)}
+              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 space-y-5">
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+              <img
+                src={selectedUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop'}
+                alt={selectedUser.name}
+                className="w-16 h-16 rounded-full object-cover border-2 border-indigo-500/40 shadow-lg"
+              />
+              <div>
+                <h4 className="text-lg font-bold text-slate-100">{selectedUser.name}</h4>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">{selectedUser.id}</p>
+                <div className="mt-2">
+                  {selectedUser.status === 'Nonaktif' ? (
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-600 text-white shadow-sm inline-flex items-center gap-1.5">
+                      <XCircle className="w-3.5 h-3.5 text-white" />
+                      <span className="text-white font-bold">Status Akun: Nonaktif</span>
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-sm inline-flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                      <span className="text-white font-bold">Status Akun: Aktif</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-1">
+                <span className="text-slate-400 text-[11px] block font-medium">NIK Pelapor</span>
+                <strong className="text-slate-100 font-mono text-xs block">{selectedUser.nik || '-'}</strong>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-1">
+                <span className="text-slate-400 text-[11px] block font-medium">Kota / Wilayah</span>
+                <strong className="text-slate-100 text-xs block">{selectedUser.city || '-'}</strong>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-1">
+                <span className="text-slate-400 text-[11px] block font-medium">Email</span>
+                <strong className="text-slate-100 text-xs truncate block">{selectedUser.email}</strong>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-1">
+                <span className="text-slate-400 text-[11px] block font-medium">No. Telepon / WA</span>
+                <strong className="text-slate-100 text-xs block">{selectedUser.phone || '-'}</strong>
+              </div>
+            </div>
+
+            {/* Status Toggle in Modal */}
+            <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+              <span className="text-xs text-slate-400 font-semibold">Ubah Keaktifan Akun:</span>
+              <button
+                onClick={() => handleToggleStatus(selectedUser)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 ${
+                  selectedUser.status === 'Aktif'
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white border border-rose-500'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-500'
+                }`}
+              >
+                {selectedUser.status === 'Aktif' ? (
+                  <>
+                    <UserX className="w-4 h-4 text-white" />
+                    <span className="text-white font-bold">Set menjadi Nonaktif</span>
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className="w-4 h-4 text-white" />
+                    <span className="text-white font-bold">Set menjadi Aktif</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 bg-slate-900 border-t border-slate-800 flex justify-end">
+            <button
+              onClick={() => setSelectedUser(null)}
+              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
+            >
+              Tutup
+            </button>
+          </div>
+
+        </div>
+      </div>
+    );
+
+    return createPortal(modalContent, document.body);
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       
@@ -98,7 +213,7 @@ export default function AdminUsersList() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold mb-2">
               <Shield className="w-3.5 h-3.5" /> Administrator Dashboard - Pengelolaan Pengguna Real-Time
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100">
               Kelola Pengguna Warga
             </h2>
             <p className="text-slate-300 text-xs sm:text-sm mt-1">
@@ -113,7 +228,7 @@ export default function AdminUsersList() {
         <div className="glass-card p-4 rounded-xl border border-slate-800 flex items-center justify-between">
           <div>
             <span className="text-xs text-slate-400 font-medium block">Total Warga Terdaftar</span>
-            <p className="text-2xl font-black text-white mt-0.5">{users.length}</p>
+            <p className="text-2xl font-black text-slate-100 mt-0.5">{users.length}</p>
           </div>
           <div className="p-3 rounded-xl bg-sky-500/10 text-sky-400">
             <Users className="w-6 h-6" />
@@ -235,12 +350,14 @@ export default function AdminUsersList() {
                       {/* Status Badge */}
                       <td className="px-5 py-4">
                         {u.status === 'Nonaktif' ? (
-                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/20 inline-flex items-center gap-1">
-                            <XCircle className="w-3.5 h-3.5" /> Nonaktif
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-600 text-white shadow-sm inline-flex items-center gap-1">
+                            <XCircle className="w-3.5 h-3.5 text-white" />
+                            <span className="text-white font-bold">Nonaktif</span>
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Aktif
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-600 text-white shadow-sm inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                            <span className="text-white font-bold">Aktif</span>
                           </span>
                         )}
                       </td>
@@ -260,21 +377,21 @@ export default function AdminUsersList() {
                           {/* Toggle Status Button */}
                           <button
                             onClick={() => handleToggleStatus(u)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
+                            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 ${
                               u.status === 'Aktif'
-                                ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20'
-                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/20'
+                                ? 'bg-rose-600 hover:bg-rose-700 text-white border border-rose-500'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-500'
                             }`}
                           >
                             {u.status === 'Aktif' ? (
                               <>
-                                <UserX className="w-3.5 h-3.5" />
-                                Nonaktifkan
+                                <UserX className="w-3.5 h-3.5 text-white" />
+                                <span className="text-white font-bold">Nonaktifkan</span>
                               </>
                             ) : (
                               <>
-                                <UserCheck className="w-3.5 h-3.5" />
-                                Aktifkan
+                                <UserCheck className="w-3.5 h-3.5 text-white" />
+                                <span className="text-white font-bold">Aktifkan</span>
                               </>
                             )}
                           </button>
@@ -303,101 +420,8 @@ export default function AdminUsersList() {
         )}
       </div>
 
-      {/* USER DETAIL MODAL */}
-      {selectedUser && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
-          <div className="glass-card w-full max-w-lg rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl text-slate-100 my-auto">
-            
-            {/* Header */}
-            <div className="p-5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-base font-bold text-white">Detail Informasi Warga</h3>
-              </div>
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 space-y-5">
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-                <img
-                  src={selectedUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop'}
-                  alt={selectedUser.name}
-                  className="w-16 h-16 rounded-full object-cover border-2 border-indigo-500/40 shadow-lg"
-                />
-                <div>
-                  <h4 className="text-lg font-bold text-white">{selectedUser.name}</h4>
-                  <p className="text-xs text-slate-400 font-mono mt-0.5">{selectedUser.id}</p>
-                  <div className="mt-1.5">
-                    {selectedUser.status === 'Nonaktif' ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                        ✕ Status Akun: Nonaktif
-                      </span>
-                    ) : (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        ✓ Status Akun: Aktif
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-1">
-                  <span className="text-slate-400 text-[11px] block">NIK Pelapor</span>
-                  <strong className="text-slate-100 font-mono text-xs">{selectedUser.nik || '-'}</strong>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-1">
-                  <span className="text-slate-400 text-[11px] block">Kota / Wilayah</span>
-                  <strong className="text-slate-100 text-xs">{selectedUser.city || '-'}</strong>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-1">
-                  <span className="text-slate-400 text-[11px] block">Email</span>
-                  <strong className="text-slate-100 text-xs truncate block">{selectedUser.email}</strong>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-1">
-                  <span className="text-slate-400 text-[11px] block">No. Telepon / WA</span>
-                  <strong className="text-slate-100 text-xs">{selectedUser.phone || '-'}</strong>
-                </div>
-              </div>
-
-              {/* Status Toggle in Modal */}
-              <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-                <span className="text-xs text-slate-400">Ubah Keaktifan Akun:</span>
-                <button
-                  onClick={() => handleToggleStatus(selectedUser)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                    selectedUser.status === 'Aktif'
-                      ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500'
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'
-                  }`}
-                >
-                  {selectedUser.status === 'Aktif' ? 'Set menjadi Nonaktif' : 'Set menjadi Aktif'}
-                </button>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 bg-slate-900 border-t border-slate-800 flex justify-end">
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
-              >
-                Tutup
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
+      {/* Render User Detail Modal Portal */}
+      {renderUserDetailModal()}
 
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import UserProfileModal from './UserProfileModal';
+import SettingsModal from './SettingsModal';
 import { 
   MapPin, History, Map as MapIcon, LogOut, 
   Users, Shield, User, ChevronDown, Settings, FileSpreadsheet 
@@ -12,6 +13,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -60,7 +62,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-xl border border-slate-800/80">
             
-            {/* Tab Pelaporan (Renamed from Histori) */}
+            {/* Tab Pelaporan */}
             <button
               onClick={() => setActiveTab('history')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
@@ -142,7 +144,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180 text-sky-400' : ''}`} />
               </button>
 
-              {/* Interactive Profile Dropdown Card */}
+              {/* Interactive Profile Dropdown Card (3 OPTIONS: Profil Saya, Setting, Logout) */}
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-56 glass-card rounded-2xl border border-slate-800 bg-slate-950/95 shadow-2xl p-2 z-50 animate-fade-in space-y-1 text-xs">
                   
@@ -169,18 +171,32 @@ export default function Navbar({ activeTab, setActiveTab }) {
                     <span>Profil Saya</span>
                   </button>
 
-                  {/* Option 2: Keluar Akun */}
+                  {/* Option 2: Setting */}
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      setIsSettingsModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-sky-500/10 text-slate-300 hover:text-sky-300 font-semibold transition-colors text-left group"
+                  >
+                    <div className="p-1.5 rounded-lg bg-slate-900 group-hover:bg-sky-500/20 text-slate-400 group-hover:text-sky-400">
+                      <Settings className="w-4 h-4" />
+                    </div>
+                    <span>Setting</span>
+                  </button>
+
+                  {/* Option 3: Logout */}
                   <button
                     onClick={() => {
                       setIsDropdownOpen(false);
                       logout();
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-rose-500/10 text-slate-300 hover:text-rose-400 font-semibold transition-colors text-left group border-t border-slate-900 pt-2"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-rose-500/10 text-slate-300 hover:text-rose-400 font-semibold transition-colors text-left group"
                   >
                     <div className="p-1.5 rounded-lg bg-slate-900 group-hover:bg-rose-500/20 text-slate-400 group-hover:text-rose-400">
                       <LogOut className="w-4 h-4" />
                     </div>
-                    <span>Keluar Akun</span>
+                    <span>Logout</span>
                   </button>
 
                 </div>
@@ -195,6 +211,11 @@ export default function Navbar({ activeTab, setActiveTab }) {
       {/* User Profile Edit Modal */}
       {isProfileModalOpen && (
         <UserProfileModal onClose={() => setIsProfileModalOpen(false)} />
+      )}
+
+      {/* Settings Modal (Theme Switcher) */}
+      {isSettingsModalOpen && (
+        <SettingsModal onClose={() => setIsSettingsModalOpen(false)} />
       )}
     </>
   );

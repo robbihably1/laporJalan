@@ -226,7 +226,7 @@ export default function AdminReportSummary() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold mb-2">
               <Shield className="w-3.5 h-3.5" /> Administrator Dashboard - Rekapitulasi & Ekspor Laporan
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100">
               Rekapitulasi & Laporan Pengaduan
             </h2>
             <p className="text-slate-300 text-xs sm:text-sm mt-1">
@@ -244,7 +244,7 @@ export default function AdminReportSummary() {
           </div>
           <button
             onClick={handleResetFilters}
-            className="text-xs text-slate-400 hover:text-white flex items-center gap-1 font-semibold transition-colors"
+            className="text-xs text-slate-400 hover:text-slate-100 flex items-center gap-1 font-semibold transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" /> Reset Filter
           </button>
@@ -366,8 +366,8 @@ export default function AdminReportSummary() {
               onClick={exportToExcel}
               className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/25 flex items-center gap-2 transition-all active:scale-95"
             >
-              <FileSpreadsheet className="w-4 h-4" />
-              Export to Excel (.xlsx)
+              <FileSpreadsheet className="w-4 h-4 text-white" />
+              <span className="text-white font-bold">Export to Excel (.xlsx)</span>
             </button>
 
             {/* Direct Download PDF Button */}
@@ -379,12 +379,12 @@ export default function AdminReportSummary() {
               {isExportingPDF ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Mengunduh PDF...
+                  <span className="text-white font-bold">Mengunduh PDF...</span>
                 </>
               ) : (
                 <>
-                  <Download className="w-4 h-4" />
-                  Export to PDF (Download Langsung)
+                  <Download className="w-4 h-4 text-white" />
+                  <span className="text-white font-bold">Export to PDF (Download Langsung)</span>
                 </>
               )}
             </button>
@@ -398,7 +398,7 @@ export default function AdminReportSummary() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
         <div className="glass-card p-4 rounded-xl border border-slate-800">
           <span className="text-xs text-slate-400 font-medium">Hasil Filtered Data</span>
-          <p className="text-2xl font-black text-white mt-1">{totalCount}</p>
+          <p className="text-2xl font-black text-slate-100 mt-1">{totalCount}</p>
         </div>
 
         <div className="glass-card p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
@@ -429,7 +429,7 @@ export default function AdminReportSummary() {
           <div className="p-4 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <PieChart className="w-4 h-4 text-sky-400" />
-              <h3 className="text-sm font-bold text-white">Pratinjau Tabel Rekapitulasi Laporan</h3>
+              <h3 className="text-sm font-bold text-slate-100">Pratinjau Tabel Rekapitulasi Laporan</h3>
             </div>
             <span className="text-xs text-slate-400">
               Menampilkan {filteredReports.length} laporan sesuai kriteria filter

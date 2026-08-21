@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useReports } from '../context/ReportContext';
 import { useAuth } from '../context/AuthContext';
 import ReportDetailModal from './ReportDetailModal';
 import { 
-  History, Search, Filter, MapPin, Calendar, Eye, 
-  CheckCircle2, Clock, AlertCircle, PlusCircle, User, Globe, XCircle, ChevronDown, Shield 
+  History, Search, Filter, PlusCircle, CheckCircle2, 
+  Clock, XCircle, AlertCircle, Eye, User, Globe, ChevronDown, Shield 
 } from 'lucide-react';
 
 export default function HistoryList({ onAddNewReport }) {
@@ -12,41 +12,50 @@ export default function HistoryList({ onAddNewReport }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
-  // For Admin: Always 'all' (Semua Laporan Warga). For Regular User: Default 'mine' (Laporan Saya)
-  const [scopeFilter, setScopeFilter] = useState(() => (user?.role === 'admin' ? 'all' : 'mine'));
-  const [selectedStatus, setSelectedStatus] = useState('Semua');
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeReport, setActiveReport] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('Semua');
+  const [selectedCategory, setSelectedCategory] = useState('Semua');
+  const [scopeFilter, setScopeFilter] = useState('mine'); // 'mine' | 'all'
   const [visibleCount, setVisibleCount] = useState(30);
 
-  // Sync default scope when user/role changes
-  useEffect(() => {
-    if (user?.role === 'admin') {
-      setScopeFilter('all');
-    } else {
-      setScopeFilter('mine');
+  // Filter reports based on searchQuery, selectedStatus, selectedCategory, and scopeFilter
+  const filteredReports = reports.filter((rep) => {
+    // 1. Scope Filter (Only for regular users)
+    if (!isAdmin && scopeFilter === 'mine') {
+      const isMine = (rep.userId && user?.id && rep.userId === user.id) ||
+                     (rep.userName && user?.name && rep.userName.toLowerCase() === user.name.toLowerCase());
+      if (!isMine) return false;
     }
-  }, [user?.role]);
 
-  // Filtering reports by session user scope, status, and search
-  const filteredReports = (reports || []).filter((rep) => {
-    const isMine = isAdmin || scopeFilter === 'all' || 
-      (rep.userId && user?.id && rep.userId === user.id) ||
-      (rep.userName && user?.name && rep.userName.toLowerCase() === user.name.toLowerCase());
+    // 2. Status Filter
+    if (selectedStatus !== 'Semua' && rep.status !== selectedStatus) {
+      return false;
+    }
 
-    const matchesStatus = selectedStatus === 'Semua' || rep.status === selectedStatus;
-    const matchesSearch = !searchQuery ||
-      (rep.title && rep.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (rep.locationName && rep.locationName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (rep.id && rep.id.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (rep.category && rep.category.toLowerCase().includes(searchQuery.toLowerCase()));
+    // 3. Category Filter
+    if (selectedCategory !== 'Semua' && rep.category !== selectedCategory) {
+      return false;
+    }
 
-    return isMine && matchesStatus && matchesSearch;
+    // 4. Search Term Filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matches = 
+        rep.title.toLowerCase().includes(q) ||
+        rep.locationName.toLowerCase().includes(q) ||
+        rep.id.toLowerCase().includes(q) ||
+        (rep.userName && rep.userName.toLowerCase().includes(q));
+      if (!matches) return false;
+    }
+
+    return true;
   });
 
-  // Base list according to scope
-  const scopedReports = (reports || []).filter(rep => {
-    if (isAdmin || scopeFilter === 'all') return true;
+  // Calculate scope count
+  const scopedReports = reports.filter((rep) => {
+    if (isAdmin) return true;
+    if (scopeFilter === 'all') return true;
     return (rep.userId && user?.id && rep.userId === user.id) ||
            (rep.userName && user?.name && rep.userName.toLowerCase() === user.name.toLowerCase());
   });
@@ -83,7 +92,7 @@ export default function HistoryList({ onAddNewReport }) {
             {isAdmin ? <Shield className="w-4 h-4 text-indigo-400" /> : <History className="w-4 h-4" />}
             {isAdmin ? 'Menu Administrator - Semua Laporan Warga' : 'Menu Pelaporan'}
           </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100">
             {isAdmin ? 'Semua Pengaduan Laporan Warga' : 'Daftar Pelaporan Jalan'}
           </h2>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
@@ -140,7 +149,7 @@ export default function HistoryList({ onAddNewReport }) {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
         <div className="glass-card p-4 rounded-xl border border-slate-800">
           <span className="text-xs text-slate-400 font-medium">Total Laporan</span>
-          <p className="text-2xl font-black text-white mt-1">{totalCount}</p>
+          <p className="text-2xl font-black text-slate-100 mt-1">{totalCount}</p>
         </div>
 
         <div className="glass-card p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
@@ -179,120 +188,134 @@ export default function HistoryList({ onAddNewReport }) {
           />
         </div>
 
-        {/* Status Filter Tabs (Semua, Menunggu, Diproses, Selesai, Ditolak) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-          {['Semua', 'Menunggu', 'Diproses', 'Selesai', 'Ditolak'].map((st) => (
-            <button
-              key={st}
-              onClick={() => { setSelectedStatus(st); setVisibleCount(30); }}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                selectedStatus === st
-                  ? st === 'Ditolak' 
-                    ? 'bg-rose-600 text-white shadow-md shadow-rose-500/20' 
-                    : 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
-                  : 'text-slate-400 hover:text-white bg-slate-900/60 hover:bg-slate-800'
-              }`}
+        {/* Filter Selects */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* Status Filter */}
+          <div className="flex items-center gap-1.5 w-1/2 sm:w-auto">
+            <Filter className="w-4 h-4 text-slate-500 hidden sm:block" />
+            <select
+              value={selectedStatus}
+              onChange={(e) => { setSelectedStatus(e.target.value); setVisibleCount(30); }}
+              className="w-full sm:w-40 px-3 py-2 rounded-xl glass-input text-xs"
             >
-              {st}
-            </button>
-          ))}
+              <option value="Semua">Semua Status</option>
+              <option value="Menunggu">Menunggu</option>
+              <option value="Diproses">Diproses</option>
+              <option value="Selesai">Selesai</option>
+              <option value="Ditolak">Ditolak</option>
+            </select>
+          </div>
+
+          {/* Category Filter */}
+          <div className="w-1/2 sm:w-auto">
+            <select
+              value={selectedCategory}
+              onChange={(e) => { setSelectedCategory(e.target.value); setVisibleCount(30); }}
+              className="w-full sm:w-44 px-3 py-2 rounded-xl glass-input text-xs"
+            >
+              <option value="Semua">Semua Kategori</option>
+              <option value="Jalan Berlubang">Jalan Berlubang</option>
+              <option value="Jalan Ambles">Jalan Ambles</option>
+              <option value="Retak & Penerangan">Retak & Penerangan</option>
+              <option value="Lainnya">Lainnya</option>
+            </select>
+          </div>
         </div>
 
       </div>
 
-      {/* Report Cards Grid */}
+      {/* Reports Card Grid */}
       {filteredReports.length === 0 ? (
         <div className="glass-card p-12 text-center rounded-2xl border border-slate-800 space-y-3">
-          <div className="w-12 h-12 rounded-full bg-slate-800 text-slate-500 flex items-center justify-center mx-auto">
-            <History className="w-6 h-6" />
-          </div>
-          <h3 className="text-base font-bold text-white">Tidak Ada Laporan Ditemukan</h3>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            {scopeFilter === 'mine' 
-              ? 'Anda belum memiliki riwayat laporan untuk filter ini.'
-              : 'Tidak ada data laporan publik yang sesuai dengan filter atau pencarian Anda.'}
+          <History className="w-12 h-12 text-slate-600 mx-auto" />
+          <h3 className="text-base font-bold text-slate-300">Belum Ada Data Laporan</h3>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            {searchQuery || selectedStatus !== 'Semua' || selectedCategory !== 'Semua'
+              ? 'Tidak ada laporan yang sesuai dengan filter pencarian Anda. Coba reset filter.'
+              : 'Belum ada laporan kerusakan jalan yang tercatat.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {displayedReports.map((report) => (
-              <div
-                key={report.id}
-                onClick={() => setActiveReport(report)}
-                className="glass-card glass-card-hover rounded-2xl border border-slate-800/80 overflow-hidden flex flex-col justify-between cursor-pointer group"
-              >
-                <div>
-                  {/* Photo Thumbnail */}
-                  <div className="relative h-44 overflow-hidden bg-slate-900">
-                    <img
-                      src={report.photoUrl}
-                      alt={report.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-md text-[11px] font-mono text-sky-400 border border-slate-800">
-                      {report.id}
-                    </div>
-                    <div className="absolute top-3 right-3">
-                      {getStatusBadge(report.status)}
-                    </div>
-                  </div>
-
-                  {/* Body Content */}
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/20">
-                        {report.category}
-                      </span>
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(report.createdAt).toLocaleDateString('id-ID')}
-                      </span>
-                    </div>
-
-                    <h3 className="text-sm font-bold text-white line-clamp-1 group-hover:text-sky-400 transition-colors">
-                      {report.title}
-                    </h3>
-
-                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
-                      {report.description}
-                    </p>
-
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 pt-1 border-t border-slate-800/60">
-                      <MapPin className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                      <span className="truncate">{report.locationName}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Footer */}
-                <div className="px-4 py-3 bg-slate-900/60 border-t border-slate-800/60 flex items-center justify-between text-xs font-semibold text-sky-400 group-hover:text-sky-300">
-                  <span>Lihat Detail Tracking</span>
-                  <Eye className="w-4 h-4" />
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {displayedReports.map((report) => (
+            <div 
+              key={report.id}
+              className="glass-card rounded-2xl border border-slate-800 overflow-hidden glass-card-hover flex flex-col justify-between"
+            >
+              {/* Image Banner */}
+              <div className="relative h-44 w-full bg-slate-900 overflow-hidden group">
+                <img 
+                  src={report.image || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=600&auto=format&fit=crop'} 
+                  alt={report.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
               </div>
-            ))}
-          </div>
 
-          {/* Load More Button if filtered items exceed visibleCount */}
-          {visibleCount < filteredReports.length && (
-            <div className="text-center pt-2">
-              <button
-                onClick={() => setVisibleCount(prev => prev + 30)}
-                className="px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-sky-400 hover:text-sky-300 font-bold text-xs inline-flex items-center gap-2 transition-all shadow-lg active:scale-95"
-              >
-                <span>Tampilkan Lebih Banyak Laporan ({filteredReports.length - visibleCount} tersisa)</span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
+              {/* Card Body */}
+              <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-[11px] font-mono text-sky-400 font-bold">{report.id}</span>
+                    {getStatusBadge(report.status)}
+                  </div>
+
+                  <h4 className="text-base font-bold text-slate-100 line-clamp-1">{report.title}</h4>
+                  <p className="text-slate-400 text-xs line-clamp-2 mt-1">{report.locationName}</p>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Kategori:</span>
+                    <span className="text-slate-200 font-semibold">{report.category}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400 font-medium">Pelapor:</span>
+                    <span className="text-slate-300 font-semibold">{report.userName || 'Masyarakat'}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                    <span>{new Date(report.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    <span>{new Date(report.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
+                  </div>
+                </div>
+
+                {/* Footer Action */}
+                <button
+                  onClick={() => setActiveReport(report)}
+                  className="w-full py-2 px-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-sky-400 hover:text-sky-300 font-semibold text-xs border border-slate-800 transition-all flex items-center justify-center gap-1.5 mt-2"
+                >
+                  <Eye className="w-4 h-4" />
+                  Lihat Detail Laporan
+                </button>
+              </div>
+
             </div>
-          )}
+          ))}
         </div>
       )}
 
-      {/* Modal Detail Report */}
+      {/* Pagination Load More Button */}
+      {visibleCount < filteredReports.length && (
+        <div className="p-4 text-center">
+          <button
+            onClick={() => setVisibleCount(prev => prev + 30)}
+            className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold text-xs inline-flex items-center gap-2 transition-all shadow-md active:scale-95"
+          >
+            <span>Tampilkan Lebih Banyak Laporan ({filteredReports.length - visibleCount} tersisa)</span>
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Detail Modal */}
       {activeReport && (
-        <ReportDetailModal
-          report={activeReport}
-          onClose={() => setActiveReport(null)}
+        <ReportDetailModal 
+          report={activeReport} 
+          onClose={() => setActiveReport(null)} 
         />
       )}
 
