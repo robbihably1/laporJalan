@@ -47,9 +47,19 @@ export default function ReportDetailModal({ report, onClose }) {
 
   if (!report) return null;
 
+  const isSameStatus = selectedStatus === report.status;
+
   // Admin Status Change Handler
   const handleAdminStatusUpdate = async (e) => {
     e.preventDefault();
+
+    if (isSameStatus) {
+      if (showToast) {
+        showToast(`Laporan saat ini sudah berstatus '${report.status}'. Silakan pilih status baru yang berbeda!`, 'warning');
+      }
+      return;
+    }
+
     setIsSubmittingStatus(true);
 
     const noteToSave = adminNote || `Status laporan diperbarui oleh Administrator menjadi '${selectedStatus}'.`;
@@ -67,19 +77,25 @@ export default function ReportDetailModal({ report, onClose }) {
       });
 
       if (fetchReports) fetchReports();
-      showToast(`Status laporan #${report.id} berhasil diubah menjadi '${selectedStatus}'!`, 'success');
+      if (showToast) {
+        showToast(`Status laporan #${report.id} berhasil diubah menjadi '${selectedStatus}'!`, 'success');
+      }
       setAdminNote('');
     } catch (err) {
       console.warn("Backend status update notice:", err.message);
-      report.status = selectedStatus;
-      if (!report.timeline) report.timeline = [];
-      report.timeline.push({
-        status: selectedStatus,
-        note: noteToSave,
-        timestamp: new Date().toISOString()
-      });
-      showToast(`Status laporan #${report.id} diperbarui menjadi '${selectedStatus}'`, 'success');
-      setAdminNote('');
+      if (err.message.includes('sudah') || err.message.includes('sama')) {
+        if (showToast) showToast(err.message, 'warning');
+      } else {
+        report.status = selectedStatus;
+        if (!report.timeline) report.timeline = [];
+        report.timeline.push({
+          status: selectedStatus,
+          note: noteToSave,
+          timestamp: new Date().toISOString()
+        });
+        if (showToast) showToast(`Status laporan #${report.id} diperbarui menjadi '${selectedStatus}'`, 'success');
+        setAdminNote('');
+      }
     } finally {
       setIsSubmittingStatus(false);
     }
@@ -124,7 +140,7 @@ export default function ReportDetailModal({ report, onClose }) {
             {/* Status & Severity Badges */}
             <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-slate-900/60 border border-slate-800">
               <div>
-                <span className="text-xs text-slate-400 block mb-1">Status Penanganan</span>
+                <span className="text-xs text-slate-400 block mb-1">Status Penanganan saat ini</span>
                 {getStatusBadge(report.status)}
               </div>
               <div>
@@ -144,13 +160,18 @@ export default function ReportDetailModal({ report, onClose }) {
             {/* ADMIN PROCESSING ACTION PANEL (Only visible when user.role === 'admin') */}
             {isAdmin && (
               <form onSubmit={handleAdminStatusUpdate} className="p-5 rounded-2xl bg-gradient-to-r from-indigo-950/60 via-slate-900 to-indigo-950/60 border border-indigo-500/30 space-y-4 shadow-xl">
-                <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs uppercase tracking-wider">
-                  <Shield className="w-4 h-4 text-indigo-400" />
-                  Panel Administrator - Tindak Lanjut & Ubah Status
+                <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
+                  <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs uppercase tracking-wider">
+                    <Shield className="w-4 h-4 text-indigo-400" />
+                    Panel Administrator - Tindak Lanjut & Ubah Status
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    Status Sekarang: <strong className="text-sky-300">{report.status}</strong>
+                  </span>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-2">Pilih Status Baru Laporan:</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-2">Pilih Status Baru Laporan (Harus Berbeda):</label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
                       { st: 'Menunggu', bg: 'hover:bg-amber-500/20 border-amber-500/40 text-amber-300', active: 'bg-amber-500 text-white border-amber-400' },
@@ -172,6 +193,13 @@ export default function ReportDetailModal({ report, onClose }) {
                   </div>
                 </div>
 
+                {isSameStatus && (
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] font-medium flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+                    <span>Status yang dipilih saat ini sama dengan status laporan (<strong>{report.status}</strong>). Silakan pilih status baru yang berbeda untuk memperbarui.</span>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">Catatan Progres / Penanganan Dinas (Timeline Note):</label>
                   <textarea
@@ -185,15 +213,19 @@ export default function ReportDetailModal({ report, onClose }) {
 
                 <button
                   type="submit"
-                  disabled={isSubmittingStatus}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                  disabled={isSubmittingStatus || isSameStatus}
+                  className={`w-full py-3 px-4 rounded-xl font-bold text-xs shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                    isSameStatus 
+                      ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed shadow-none' 
+                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-indigo-500/25'
+                  }`}
                 >
                   {isSubmittingStatus ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   ) : (
                     <>
                       <Save className="w-4 h-4" />
-                      Simpan & Perbarui Status Laporan SEKARANG
+                      {isSameStatus ? 'Pilih Status Berbeda untuk Memperbarui' : 'Simpan & Perbarui Status Laporan SEKARANG'}
                     </>
                   )}
                 </button>

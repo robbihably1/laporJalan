@@ -12,6 +12,8 @@ const createCustomIcon = (status) => {
     colorUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png';
   } else if (status === 'Selesai') {
     colorUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png';
+  } else if (status === 'Ditolak') {
+    colorUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png';
   }
 
   return new L.Icon({
@@ -29,7 +31,15 @@ export default function MapView() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [filterStatus, setFilterStatus] = useState('Semua');
 
-  const filtered = reports.filter(r => filterStatus === 'Semua' || r.status === filterStatus);
+  // Filter and validate valid numeric coordinates
+  const validFilteredReports = (reports || []).filter(r => {
+    const matchesStatus = filterStatus === 'Semua' || r.status === filterStatus;
+    const isValidCoord = r && !isNaN(parseFloat(r.latitude)) && !isNaN(parseFloat(r.longitude));
+    return matchesStatus && isValidCoord;
+  });
+
+  // Cap visible map markers to 250 for optimal map performance
+  const displayMarkers = validFilteredReports.slice(0, 250);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -44,17 +54,17 @@ export default function MapView() {
             Peta Titik Jalan Rusak
           </h2>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Visualisasi lokasi seluruh laporan masyarakat beserta status penanganan terkini.
+            Visualisasi lokasi titik laporan masyarakat ({displayMarkers.length} dari {validFilteredReports.length} laporan ditampilkan pada peta).
           </p>
         </div>
 
         {/* Filter Buttons */}
-        <div className="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800">
-          {['Semua', 'Menunggu', 'Diproses', 'Selesai'].map((st) => (
+        <div className="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 overflow-x-auto max-w-full">
+          {['Semua', 'Menunggu', 'Diproses', 'Selesai', 'Ditolak'].map((st) => (
             <button
               key={st}
               onClick={() => setFilterStatus(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                 filterStatus === st
                   ? 'bg-sky-500 text-white shadow'
                   : 'text-slate-400 hover:text-white'
@@ -69,8 +79,8 @@ export default function MapView() {
       {/* Interactive Map */}
       <div className="glass-card rounded-2xl border border-slate-800 p-2 overflow-hidden h-[600px] relative shadow-2xl">
         <MapContainer
-          center={[-6.2250, 106.8350]}
-          zoom={12}
+          center={[-6.2000, 106.8166]}
+          zoom={11}
           scrollWheelZoom={true}
           className="w-full h-full rounded-xl"
         >
@@ -79,10 +89,10 @@ export default function MapView() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          {filtered.map((report) => (
+          {displayMarkers.map((report) => (
             <Marker
               key={report.id}
-              position={[report.latitude, report.longitude]}
+              position={[parseFloat(report.latitude), parseFloat(report.longitude)]}
               icon={createCustomIcon(report.status)}
             >
               <Popup>
@@ -100,7 +110,8 @@ export default function MapView() {
                   <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                       report.status === 'Selesai' ? 'bg-emerald-500/20 text-emerald-300' :
-                      report.status === 'Diproses' ? 'bg-sky-500/20 text-sky-300' : 'bg-amber-500/20 text-amber-300'
+                      report.status === 'Diproses' ? 'bg-sky-500/20 text-sky-300' :
+                      report.status === 'Ditolak' ? 'bg-rose-500/20 text-rose-300' : 'bg-amber-500/20 text-amber-300'
                     }`}>
                       {report.status}
                     </span>
@@ -118,7 +129,7 @@ export default function MapView() {
         </MapContainer>
 
         {/* Legend Overlay */}
-        <div className="absolute top-5 right-5 z-10 glass-card p-3 rounded-xl border border-slate-700/80 text-xs space-y-1.5 shadow-lg backdrop-blur-md">
+        <div className="absolute top-5 right-5 z-[1000] glass-card p-3 rounded-xl border border-slate-700/80 text-xs space-y-1.5 shadow-lg backdrop-blur-md">
           <div className="font-bold text-slate-200 mb-1 text-[11px] uppercase tracking-wider">Keterangan Pin Peta</div>
           <div className="flex items-center gap-2 text-slate-300">
             <span className="w-3 h-3 rounded-full bg-red-500"></span> Menunggu Verifikasi
@@ -128,6 +139,9 @@ export default function MapView() {
           </div>
           <div className="flex items-center gap-2 text-slate-300">
             <span className="w-3 h-3 rounded-full bg-green-500"></span> Selesai Dibereskan
+          </div>
+          <div className="flex items-center gap-2 text-slate-300">
+            <span className="w-3 h-3 rounded-full bg-slate-500"></span> Ditolak
           </div>
         </div>
       </div>

@@ -11,12 +11,13 @@ import AddReportForm from './components/AddReportForm';
 import HistoryList from './components/HistoryList';
 import MapView from './components/MapView';
 import AdminUsersList from './components/AdminUsersList';
+import AdminReportSummary from './components/AdminReportSummary';
 
 function MainAppContent() {
   const { user, isAuthenticated } = useAuth();
   const isAdmin = user?.role === 'admin';
 
-  const [activeTab, setActiveTab] = useState('add'); // 'add', 'history', 'map', 'users'
+  const [activeTab, setActiveTab] = useState('add'); // 'add', 'history', 'map', 'users', 'summary'
   const [authView, setAuthView] = useState('login'); // 'login', 'register', 'verify'
   const [pendingVerification, setPendingVerification] = useState({ email: '', token: '' });
 
@@ -90,6 +91,9 @@ function MainAppContent() {
         )}
         {activeTab === 'users' && isAdmin && (
           <AdminUsersList />
+        )}
+        {activeTab === 'summary' && isAdmin && (
+          <AdminReportSummary />
         )}
       </main>
 

@@ -5,18 +5,7 @@ import { reportsApi } from '../services/api';
 const ReportContext = createContext();
 
 export const ReportProvider = ({ children }) => {
-  const [reports, setReports] = useState(() => {
-    const saved = localStorage.getItem('laporjalan_reports');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return INITIAL_REPORTS;
-      }
-    }
-    return INITIAL_REPORTS;
-  });
-
+  const [reports, setReports] = useState(INITIAL_REPORTS);
   const [toast, setToast] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,7 +19,7 @@ export const ReportProvider = ({ children }) => {
     setIsLoading(true);
     try {
       const response = await reportsApi.getAll();
-      if (response && response.data && response.data.length > 0) {
+      if (response && response.data && Array.isArray(response.data)) {
         setReports(response.data);
       }
     } catch (err) {
@@ -44,8 +33,15 @@ export const ReportProvider = ({ children }) => {
     fetchReports();
   }, [fetchReports]);
 
+  // Safe localStorage cache with try/catch to avoid QuotaExceededError when storing large datasets
   useEffect(() => {
-    localStorage.setItem('laporjalan_reports', JSON.stringify(reports));
+    try {
+      if (reports && reports.length > 0) {
+        localStorage.setItem('laporjalan_reports', JSON.stringify(reports.slice(0, 50)));
+      }
+    } catch (e) {
+      console.warn("LocalStorage Quota Exceeded (normal for large dataset):", e.message);
+    }
   }, [reports]);
 
   // Add Report Handler (Backend Integrated)

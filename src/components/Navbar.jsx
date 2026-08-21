@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import UserProfileModal from './UserProfileModal';
 import { 
   MapPin, PlusCircle, History, Map as MapIcon, LogOut, 
-  Users, Shield, User, ChevronDown, Settings 
+  Users, Shield, User, ChevronDown, Settings, FileSpreadsheet 
 } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab }) {
@@ -110,6 +110,21 @@ export default function Navbar({ activeTab, setActiveTab }) {
               >
                 <Users className="w-4 h-4" />
                 Kelola Users
+              </button>
+            )}
+
+            {/* Special Menu for ADMIN: Rekap & Laporan */}
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab('summary')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  activeTab === 'summary'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                Rekap & Laporan
               </button>
             )}
           </nav>
