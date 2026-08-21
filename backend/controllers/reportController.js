@@ -345,3 +345,110 @@ exports.updateReportStatus = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error: ' + error.message });
   }
 };
+
+// 5. Update Report Content/Details by Citizen User (Allowed ONLY IF status === 'Menunggu')
+exports.updateReportDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, category, severity, description, locationName, latitude, longitude, photoUrl } = req.body;
+
+    const now = new Date();
+    const formattedTimestamp = now.toISOString().replace('T', ' ').substring(0, 19);
+
+    try {
+      // 1. Check if report exists and status is 'Menunggu'
+      const [existingRows] = await pool.query('SELECT * FROM reports WHERE id = ?', [id]);
+      if (!existingRows || existingRows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan!' });
+      }
+
+      const currentReport = existingRows[0];
+      if (currentReport.status !== 'Menunggu') {
+        return res.status(400).json({
+          success: false,
+          message: `Laporan berstatus '${currentReport.status}' tidak dapat diperbarui lagi. Perubahan hanya diizinkan saat status masih 'Menunggu' verifikasi.`
+        });
+      }
+
+      // 2. Update report fields
+      await pool.query(
+        `UPDATE reports 
+         SET title = ?, category = ?, severity = ?, description = ?, location_name = ?, latitude = ?, longitude = ?, photo_url = ?
+         WHERE id = ?`,
+        [
+          title || currentReport.title,
+          category || currentReport.category,
+          severity || currentReport.severity,
+          description || currentReport.description,
+          locationName || currentReport.location_name,
+          latitude !== undefined ? latitude : currentReport.latitude,
+          longitude !== undefined ? longitude : currentReport.longitude,
+          photoUrl || currentReport.photo_url,
+          id
+        ]
+      );
+
+      // 3. Insert timeline record for edit activity
+      await pool.query(
+        `INSERT INTO report_timelines (report_id, status, note, timestamp)
+         VALUES (?, ?, ?, ?)`,
+        [id, 'Menunggu', 'Pengguna memperbarui rincian data pengajuan laporan.', formattedTimestamp]
+      );
+
+      // 4. Fetch updated report object with full timeline
+      const [updatedRows] = await pool.query('SELECT * FROM reports WHERE id = ?', [id]);
+      const [timelineRows] = await pool.query('SELECT status, note, timestamp FROM report_timelines WHERE report_id = ? ORDER BY id ASC', [id]);
+
+      const updatedReportObj = {
+        id: updatedRows[0].id,
+        title: updatedRows[0].title,
+        category: updatedRows[0].category,
+        severity: updatedRows[0].severity,
+        description: updatedRows[0].description,
+        locationName: updatedRows[0].location_name,
+        latitude: Number(updatedRows[0].latitude),
+        longitude: Number(updatedRows[0].longitude),
+        photoUrl: updatedRows[0].photo_url,
+        status: updatedRows[0].status,
+        createdAt: updatedRows[0].created_at,
+        userName: updatedRows[0].user_name,
+        userPhone: updatedRows[0].user_phone,
+        userId: updatedRows[0].user_id,
+        timeline: timelineRows
+      };
+
+      return res.json({
+        success: true,
+        message: 'Data laporan berhasil diperbarui!',
+        data: updatedReportObj
+      });
+
+    } catch (dbErr) {
+      console.warn("DB Update Report Details Fallback:", dbErr.message);
+      const target = MOCK_REPORTS.find(r => r.id === id);
+      if (target) {
+        if (target.status !== 'Menunggu') {
+          return res.status(400).json({
+            success: false,
+            message: `Laporan berstatus '${target.status}' sudah tidak dapat diperbarui lagi.`
+          });
+        }
+        target.title = title || target.title;
+        target.category = category || target.category;
+        target.severity = severity || target.severity;
+        target.description = description || target.description;
+        target.locationName = locationName || target.locationName;
+        if (latitude) target.latitude = latitude;
+        if (longitude) target.longitude = longitude;
+        if (photoUrl) target.photoUrl = photoUrl;
+        target.timeline.push({ status: 'Menunggu', note: 'Pengguna memperbarui rincian data pengajuan laporan.', timestamp: formattedTimestamp });
+        return res.json({ success: true, message: 'Data laporan berhasil diperbarui!', data: target });
+      }
+    }
+
+    return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+  }
+};
+

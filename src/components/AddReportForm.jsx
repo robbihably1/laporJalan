@@ -3,9 +3,10 @@ import { useReports } from '../context/ReportContext';
 import { useAuth } from '../context/AuthContext';
 import { uploadApi } from '../services/api';
 import LocationPickerMap from './LocationPickerMap';
+import SuccessAlertModal from './SuccessAlertModal';
 import { 
   Camera, MapPin, AlertTriangle, FileText, Send, Image as ImageIcon, 
-  Trash2, Navigation, Check, HelpCircle, Sparkles, Loader2
+  Trash2, Navigation, Check, HelpCircle, Sparkles, Loader2, ArrowLeft
 } from 'lucide-react';
 
 const SAMPLE_PHOTOS = [
@@ -14,7 +15,7 @@ const SAMPLE_PHOTOS = [
   { label: 'Retak Asfalt', url: 'https://images.unsplash.com/photo-1621929747188-0b4dc28498d2?q=80&w=800&auto=format&fit=crop' }
 ];
 
-export default function AddReportForm({ onSuccess }) {
+export default function AddReportForm({ onSuccess, onBack }) {
   const { addReport } = useReports();
   const { user } = useAuth();
 
@@ -22,13 +23,14 @@ export default function AddReportForm({ onSuccess }) {
   const [category, setCategory] = useState('Jalan Berlubang');
   const [severity, setSeverity] = useState('Parah');
   const [description, setDescription] = useState('');
-  const [locationName, setLocationName] = useState('Jl. Jendral Sudirman KM 5');
-  const [latitude, setLatitude] = useState(-6.2088);
-  const [longitude, setLongitude] = useState(106.8219);
+  const [locationName, setLocationName] = useState('Jl. Raya Pajajaran, Kota Bogor');
+  const [latitude, setLatitude] = useState(-6.5950);
+  const [longitude, setLongitude] = useState(106.8050);
   const [photoUrl, setPhotoUrl] = useState(SAMPLE_PHOTOS[0].url);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isGettingGps, setIsGettingGps] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
   // File Upload Handler (Clean File Upload to Server Disk)
   const handleImageUpload = async (e) => {
@@ -66,8 +68,8 @@ export default function AddReportForm({ onSuccess }) {
         },
         (error) => {
           console.warn("GPS error:", error);
-          setLatitude(-6.2088 + (Math.random() - 0.5) * 0.01);
-          setLongitude(106.8219 + (Math.random() - 0.5) * 0.01);
+          setLatitude(-6.5950 + (Math.random() - 0.5) * 0.01);
+          setLongitude(106.8050 + (Math.random() - 0.5) * 0.01);
           setIsGettingGps(false);
         },
         { timeout: 8000 }
@@ -104,15 +106,35 @@ export default function AddReportForm({ onSuccess }) {
         userPhone: user?.phone || '0812-0000-0000'
       });
       setIsSubmitting(false);
-      if (onSuccess) onSuccess();
+
+      // Trigger Modern Green Checkmark Success Modal Popup
+      setShowSuccessAlert(true);
     } catch (error) {
       setIsSubmitting(false);
+      alert("Gagal mengirimkan laporan: " + error.message);
     }
   };
 
+  const handleAlertConfirm = () => {
+    setShowSuccessAlert(false);
+    if (onSuccess) onSuccess();
+  };
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-5">
       
+      {/* Top Back Action Button */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={onBack || onSuccess}
+          type="button"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold transition-all shadow-md active:scale-95 group"
+        >
+          <ArrowLeft className="w-4 h-4 text-sky-400 group-hover:-translate-x-1 transition-transform" />
+          <span>Kembali ke Pelaporan</span>
+        </button>
+      </div>
+
       {/* Header Banner */}
       <div className="glass-card p-6 rounded-2xl border border-sky-500/20 relative overflow-hidden bg-gradient-to-r from-slate-900 via-sky-950/40 to-slate-900">
         <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
@@ -393,6 +415,15 @@ export default function AddReportForm({ onSuccess }) {
         </div>
 
       </form>
+
+      {/* MODERN GREEN CHECKMARK SUCCESS MODAL */}
+      <SuccessAlertModal
+        isOpen={showSuccessAlert}
+        title="Laporan Berhasil Disubmit!"
+        message="Laporan jalan rusak Anda telah resmi terdaftar dan tersimpan di sistem LaporJalan untuk segera ditindaklanjuti oleh dinas terkait."
+        buttonText="Lihat Daftar Pelaporan"
+        onConfirm={handleAlertConfirm}
+      />
     </div>
   );
 }

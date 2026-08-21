@@ -17,7 +17,8 @@ function MainAppContent() {
   const { user, isAuthenticated } = useAuth();
   const isAdmin = user?.role === 'admin';
 
-  const [activeTab, setActiveTab] = useState('add'); // 'add', 'history', 'map', 'users', 'summary'
+  // Default active tab is 'history' (Pelaporan)
+  const [activeTab, setActiveTab] = useState('history');
   const [authView, setAuthView] = useState('login'); // 'login', 'register', 'verify'
   const [pendingVerification, setPendingVerification] = useState({ email: '', token: '' });
 
@@ -37,12 +38,19 @@ function MainAppContent() {
     }
   }, []);
 
-  // Set default tab when admin logs in
+  // Automatic Tab Safety & Sync: Whenever user role/session changes, reset activeTab to 'history' if it's an admin-only tab
   useEffect(() => {
-    if (isAdmin && activeTab === 'add') {
+    if (!isAdmin && (activeTab === 'users' || activeTab === 'summary')) {
       setActiveTab('history');
     }
-  }, [isAdmin, activeTab]);
+  }, [user, isAdmin, activeTab]);
+
+  // Reset tab state when user logs out
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setActiveTab('history');
+    }
+  }, [isAuthenticated]);
 
   // Unauthenticated Auth Routing Views
   if (!isAuthenticated) {
@@ -81,7 +89,7 @@ function MainAppContent() {
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {activeTab === 'add' && !isAdmin && (
-          <AddReportForm onSuccess={() => setActiveTab('history')} />
+          <AddReportForm onSuccess={() => setActiveTab('history')} onBack={() => setActiveTab('history')} />
         )}
         {activeTab === 'history' && (
           <HistoryList onAddNewReport={() => setActiveTab('add')} />

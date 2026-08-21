@@ -1,25 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useReports } from '../context/ReportContext';
 import { useAuth } from '../context/AuthContext';
 import ReportDetailModal from './ReportDetailModal';
 import { 
   History, Search, Filter, MapPin, Calendar, Eye, 
-  CheckCircle2, Clock, AlertCircle, PlusCircle, User, Globe, XCircle, ChevronDown 
+  CheckCircle2, Clock, AlertCircle, PlusCircle, User, Globe, XCircle, ChevronDown, Shield 
 } from 'lucide-react';
 
 export default function HistoryList({ onAddNewReport }) {
   const { reports } = useReports();
   const { user } = useAuth();
-  
-  const [scopeFilter, setScopeFilter] = useState('mine'); // 'mine' (Laporan Saya) | 'all' (Semua Laporan Publik)
+  const isAdmin = user?.role === 'admin';
+
+  // For Admin: Always 'all' (Semua Laporan Warga). For Regular User: Default 'mine' (Laporan Saya)
+  const [scopeFilter, setScopeFilter] = useState(() => (user?.role === 'admin' ? 'all' : 'mine'));
   const [selectedStatus, setSelectedStatus] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeReport, setActiveReport] = useState(null);
   const [visibleCount, setVisibleCount] = useState(30);
 
+  // Sync default scope when user/role changes
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      setScopeFilter('all');
+    } else {
+      setScopeFilter('mine');
+    }
+  }, [user?.role]);
+
   // Filtering reports by session user scope, status, and search
   const filteredReports = (reports || []).filter((rep) => {
-    const isMine = scopeFilter === 'all' || 
+    const isMine = isAdmin || scopeFilter === 'all' || 
       (rep.userId && user?.id && rep.userId === user.id) ||
       (rep.userName && user?.name && rep.userName.toLowerCase() === user.name.toLowerCase());
 
@@ -35,7 +46,7 @@ export default function HistoryList({ onAddNewReport }) {
 
   // Base list according to scope
   const scopedReports = (reports || []).filter(rep => {
-    if (scopeFilter === 'all') return true;
+    if (isAdmin || scopeFilter === 'all') return true;
     return (rep.userId && user?.id && rep.userId === user.id) ||
            (rep.userName && user?.name && rep.userName.toLowerCase() === user.name.toLowerCase());
   });
@@ -69,17 +80,18 @@ export default function HistoryList({ onAddNewReport }) {
       <div className="glass-card p-6 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-sky-400 text-xs font-bold uppercase tracking-wider mb-1">
-            <History className="w-4 h-4" /> Menu Pelaporan Saya
+            {isAdmin ? <Shield className="w-4 h-4 text-indigo-400" /> : <History className="w-4 h-4" />}
+            {isAdmin ? 'Menu Administrator - Semua Laporan Warga' : 'Menu Pelaporan'}
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
-            Histori Pelaporan Jalan
+            {isAdmin ? 'Semua Pengaduan Laporan Warga' : 'Daftar Pelaporan Jalan'}
           </h2>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Terhubung dengan sesi akun <strong className="text-slate-200">{user?.name || 'Pelapor'}</strong> ({user?.email})
+            {isAdmin ? `Menampilkan seluruh ${totalCount} laporan warga masyarakat` : `Terhubung dengan akun ${user?.name || 'Pelapor'} (${user?.email})`}
           </p>
         </div>
 
-        {user?.role !== 'admin' && (
+        {!isAdmin && (
           <button
             onClick={onAddNewReport}
             className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-sky-500/20 transition-all active:scale-95 flex-shrink-0"
@@ -90,37 +102,39 @@ export default function HistoryList({ onAddNewReport }) {
         )}
       </div>
 
-      {/* Scope Filter Tabs (Laporan Saya vs Semua Laporan Publik) */}
-      <div className="flex items-center justify-between gap-3 p-1.5 rounded-2xl bg-slate-900/90 border border-slate-800">
-        <div className="grid grid-cols-2 gap-1.5 w-full sm:w-80">
-          <button
-            onClick={() => { setScopeFilter('mine'); setVisibleCount(30); }}
-            className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-              scopeFilter === 'mine'
-                ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white bg-transparent'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            Laporan Saya
-          </button>
-          <button
-            onClick={() => { setScopeFilter('all'); setVisibleCount(30); }}
-            className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-              scopeFilter === 'all'
-                ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white bg-transparent'
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            Semua Laporan Publik
-          </button>
-        </div>
+      {/* Scope Filter Tabs (Only shown for regular Users, HIDDEN FOR ADMIN to directly display all citizen reports) */}
+      {!isAdmin && (
+        <div className="flex items-center justify-between gap-3 p-1.5 rounded-2xl bg-slate-900/90 border border-slate-800">
+          <div className="grid grid-cols-2 gap-1.5 w-full sm:w-80">
+            <button
+              onClick={() => { setScopeFilter('mine'); setVisibleCount(30); }}
+              className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                scopeFilter === 'mine'
+                  ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
+                  : 'text-slate-400 hover:text-white bg-transparent'
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              Laporan Saya
+            </button>
+            <button
+              onClick={() => { setScopeFilter('all'); setVisibleCount(30); }}
+              className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                scopeFilter === 'all'
+                  ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
+                  : 'text-slate-400 hover:text-white bg-transparent'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              Semua Laporan Publik
+            </button>
+          </div>
 
-        <span className="hidden sm:block text-xs text-slate-400 font-medium pr-3">
-          {scopeFilter === 'mine' ? `Menampilkan ${totalCount} laporan akun Anda` : `Menampilkan seluruh laporan publik (${totalCount})`}
-        </span>
-      </div>
+          <span className="hidden sm:block text-xs text-slate-400 font-medium pr-3">
+            {scopeFilter === 'mine' ? `Menampilkan ${totalCount} laporan akun Anda` : `Menampilkan seluruh laporan publik (${totalCount})`}
+          </span>
+        </div>
+      )}
 
       {/* Summary Stat Cards (5 Grid Columns including Ditolak) */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">

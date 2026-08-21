@@ -28,11 +28,13 @@ const authRoutes = require('./routes/authRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const regionRoutes = require('./routes/regionRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/regions', regionRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {

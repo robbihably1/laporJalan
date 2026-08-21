@@ -89,8 +89,39 @@ export const ReportProvider = ({ children }) => {
     return newReport;
   };
 
+  // Update Report Details Handler (Backend Integrated)
+  const updateReportDetails = async (id, updatedData) => {
+    try {
+      const apiResponse = await reportsApi.updateDetails(id, updatedData);
+      if (apiResponse && apiResponse.data) {
+        const updatedReport = apiResponse.data;
+        setReports(prev => prev.map(r => r.id === id ? { ...r, ...updatedReport } : r));
+        showToast(apiResponse.message || `Laporan #${id} berhasil diperbarui!`, 'success');
+        return updatedReport;
+      }
+    } catch (err) {
+      console.warn("Backend update report warning, updating locally:", err.message);
+    }
+
+    // Local Fallback
+    setReports(prev => prev.map(r => {
+      if (r.id === id) {
+        return {
+          ...r,
+          ...updatedData,
+          timeline: [
+            ...(r.timeline || []),
+            { status: 'Menunggu', note: 'Pengguna memperbarui rincian data laporan.', timestamp: new Date().toISOString() }
+          ]
+        };
+      }
+      return r;
+    }));
+    showToast(`Laporan #${id} berhasil diperbarui!`, 'success');
+  };
+
   return (
-    <ReportContext.Provider value={{ reports, addReport, showToast, toast, fetchReports, isLoading }}>
+    <ReportContext.Provider value={{ reports, addReport, updateReportDetails, showToast, toast, fetchReports, isLoading }}>
       {children}
       {/* Global Toast Notification */}
       {toast && (

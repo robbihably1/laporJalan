@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
-import { uploadApi } from '../services/api';
+import { uploadApi, regionsApi } from '../services/api';
+import SuccessAlertModal from './SuccessAlertModal';
 import { 
   X, User, Mail, Phone, MapPin, Camera, Save, 
   CheckCircle2, Shield, Loader2, Sparkles 
@@ -20,11 +21,54 @@ export default function UserProfileModal({ onClose }) {
   const [name, setName] = useState(user?.name || '');
   const [nik, setNik] = useState(user?.nik || '');
   const [phone, setPhone] = useState(user?.phone || '');
-  const [city, setCity] = useState(user?.city || '');
+  
+  // Regional Cascading Dropdowns
+  const [province, setProvince] = useState(user?.province || 'Jawa Barat');
+  const [city, setCity] = useState(user?.city || 'Kota Bogor');
+  const [district, setDistrict] = useState(user?.district || '');
+  const [village, setVillage] = useState(user?.village || '');
+
+  const [districtsList, setDistrictsList] = useState([]);
+  const [villagesList, setVillagesList] = useState([]);
+
   const [avatar, setAvatar] = useState(user?.avatar || SAMPLE_AVATARS[0]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+
+  // Fetch districts on city change
+  useEffect(() => {
+    if (city) {
+      setProvince('Jawa Barat');
+      regionsApi.getDistricts(city).then(res => {
+        if (res && res.data) {
+          setDistrictsList(res.data);
+          if (res.data.length > 0 && !res.data.some(d => d.name === district)) {
+            setDistrict(res.data[0].name);
+          }
+        }
+      }).catch(err => {
+        console.warn("Fetch districts error:", err.message);
+      });
+    }
+  }, [city]);
+
+  // Fetch villages on district change
+  useEffect(() => {
+    if (district) {
+      regionsApi.getVillages(district).then(res => {
+        if (res && res.data) {
+          setVillagesList(res.data);
+          if (res.data.length > 0 && !res.data.some(v => v.name === village)) {
+            setVillage(res.data[0].name);
+          }
+        }
+      }).catch(err => {
+        console.warn("Fetch villages error:", err.message);
+      });
+    }
+  }, [district]);
 
   if (!user) return null;
 
@@ -63,19 +107,27 @@ export default function UserProfileModal({ onClose }) {
         name,
         nik,
         phone,
+        province,
         city,
+        district,
+        village,
         avatar
       });
 
       setIsSaving(false);
       setMsg({ type: 'success', text: res?.message || 'Profil berhasil diperbarui!' });
-      setTimeout(() => {
-        if (onClose) onClose();
-      }, 1200);
+
+      // Trigger Modern Green Checkmark Success Alert
+      setShowSuccessAlert(true);
     } catch (error) {
       setIsSaving(false);
       setMsg({ type: 'error', text: error.message || 'Gagal memperbarui profil.' });
     }
+  };
+
+  const handleAlertConfirm = () => {
+    setShowSuccessAlert(false);
+    if (onClose) onClose();
   };
 
   const modalContent = (
@@ -90,7 +142,7 @@ export default function UserProfileModal({ onClose }) {
             </div>
             <div>
               <h3 className="text-base font-bold text-white">Profil & Pengaturan Akun</h3>
-              <p className="text-[11px] text-slate-400">Perbarui informasi data diri Anda</p>
+              <p className="text-[11px] text-slate-400">Perbarui informasi data diri & domisili wilayah Anda</p>
             </div>
           </div>
           <button
@@ -184,27 +236,74 @@ export default function UserProfileModal({ onClose }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Email (Terdaftar)</label>
-                <input
-                  type="email"
-                  disabled
-                  value={user.email}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-400 cursor-not-allowed"
-                />
+            {/* Regional Cascading Dropdowns */}
+            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">Domisili Wilayah</span>
+                <span className="text-[10px] text-slate-400">Jawa Barat</span>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">Kota / Kabupaten</label>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Jakarta Selatan"
-                  className="w-full px-4 py-2.5 rounded-xl glass-input text-xs"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Kota / Kabupaten</label>
+                  <select
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl glass-input text-xs"
+                  >
+                    <option value="Kota Bogor">Kota Bogor</option>
+                    <option value="Kabupaten Bogor">Kabupaten Bogor</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Provinsi</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={province}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-400 text-xs font-semibold cursor-not-allowed"
+                  />
+                </div>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Kecamatan</label>
+                  <select
+                    value={district}
+                    onChange={(e) => setDistrict(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl glass-input text-xs"
+                  >
+                    {districtsList.map((d) => (
+                      <option key={d.id} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Kelurahan / Desa</label>
+                  <select
+                    value={village}
+                    onChange={(e) => setVillage(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl glass-input text-xs"
+                  >
+                    {villagesList.map((v) => (
+                      <option key={v.id} value={v.name}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Email (Terdaftar)</label>
+              <input
+                type="email"
+                disabled
+                value={user.email}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-400 cursor-not-allowed"
+              />
             </div>
           </div>
 
@@ -235,6 +334,15 @@ export default function UserProfileModal({ onClose }) {
           </div>
 
         </form>
+
+        {/* MODERN GREEN CHECKMARK SUCCESS MODAL */}
+        <SuccessAlertModal
+          isOpen={showSuccessAlert}
+          title="Profil Berhasil Disubmit!"
+          message="Perubahan data diri dan lokasi domisili wilayah Anda telah berhasil disubmit dan diperbarui di sistem."
+          buttonText="Selesai"
+          onConfirm={handleAlertConfirm}
+        />
 
       </div>
     </div>

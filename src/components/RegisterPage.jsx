@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { regionsApi } from '../services/api';
 import { 
   MapPin, Camera, ArrowRight, CheckCircle2, 
   UserCheck, Sparkles, UserPlus, FileText, Lock, Mail, Phone, Building2 
@@ -12,10 +13,56 @@ export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted 
   const [nik, setNik] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [city, setCity] = useState('Jakarta Selatan');
+
+  // Regional Master Cascading Dropdown States
+  const [province, setProvince] = useState('Jawa Barat');
+  const [city, setCity] = useState('Kota Bogor');
+  const [district, setDistrict] = useState('');
+  const [village, setVillage] = useState('');
+
+  const [districtsList, setDistrictsList] = useState([]);
+  const [villagesList, setVillagesList] = useState([]);
+
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // 1. Cascading logic: When Kota / Kabupaten is selected -> Auto-fill Province to 'Jawa Barat' & fetch Districts
+  useEffect(() => {
+    if (city) {
+      setProvince('Jawa Barat');
+      regionsApi.getDistricts(city).then(res => {
+        if (res && res.data) {
+          setDistrictsList(res.data);
+          if (res.data.length > 0) {
+            setDistrict(res.data[0].name);
+          } else {
+            setDistrict('');
+          }
+        }
+      }).catch(err => {
+        console.warn("Fetch districts notice:", err.message);
+      });
+    }
+  }, [city]);
+
+  // 2. Cascading logic: When Kecamatan is selected -> Fetch Villages automatically
+  useEffect(() => {
+    if (district) {
+      regionsApi.getVillages(district).then(res => {
+        if (res && res.data) {
+          setVillagesList(res.data);
+          if (res.data.length > 0) {
+            setVillage(res.data[0].name);
+          } else {
+            setVillage('');
+          }
+        }
+      }).catch(err => {
+        console.warn("Fetch villages notice:", err.message);
+      });
+    }
+  }, [district]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,7 +84,10 @@ export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted 
         nik,
         email,
         phone: phone || '0812-0000-0000',
+        province,
         city,
+        district,
+        village,
         password
       });
 
@@ -70,7 +120,7 @@ export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted 
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
         
         {/* Left Side: Brand Showcase */}
-        <div className="lg:col-span-6 space-y-6 text-slate-100 pr-0 lg:pr-6">
+        <div className="lg:col-span-5 space-y-6 text-slate-100 pr-0 lg:pr-6">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-semibold tracking-wide">
             <Sparkles className="w-4 h-4" />
             Pendaftaran Akun Warga Terverifikasi
@@ -85,8 +135,8 @@ export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted 
             </h1>
           </div>
 
-          <p className="text-slate-300 text-base sm:text-lg leading-relaxed">
-            Daftarkan akun warga Anda untuk menyampaikan laporan jalan rusak secara resmi, mengunggah bukti foto presisi, dan memantau status tindak lanjut oleh Dinas Terkait secara real-time.
+          <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+            Daftarkan akun warga Anda untuk menyampaikan laporan jalan rusak secara resmi, mengunggah bukti foto presisi, dan memantau status penanganan secara real-time.
           </p>
 
           {/* Verification Badges */}
@@ -97,7 +147,7 @@ export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted 
               </div>
               <div>
                 <h4 className="text-sm font-semibold text-white">Identitas Terverifikasi</h4>
-                <p className="text-xs text-slate-400">Pencatatan NIK untuk kepastian penanganan laporan valid</p>
+                <p className="text-xs text-slate-400">Pencatatan NIK & Wilayah domisili presisi</p>
               </div>
             </div>
 
@@ -106,7 +156,7 @@ export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted 
                 <UserCheck className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-white">Verifikasi Email Keaktifan Akun</h4>
+                <h4 className="text-sm font-semibold text-white">Verifikasi Email Aktivasi</h4>
                 <p className="text-xs text-slate-400">Default akun berstatus Nonaktif hingga email diverifikasi</p>
               </div>
             </div>
@@ -114,14 +164,14 @@ export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted 
         </div>
 
         {/* Right Side: Registration Form Card */}
-        <div className="lg:col-span-6">
+        <div className="lg:col-span-7">
           <div className="glass-card p-6 sm:p-8 rounded-2xl shadow-2xl border border-slate-800/80 space-y-5">
             <div>
               <div className="flex items-center gap-2 text-sky-400 text-xs font-bold uppercase tracking-wider mb-1">
                 <UserPlus className="w-4 h-4" /> Formulir Registrasi
               </div>
               <h2 className="text-2xl font-bold text-white">Daftar Akun Baru</h2>
-              <p className="text-slate-400 text-xs mt-1">Lengkapi data Anda di bawah ini untuk membuat akun pelapor</p>
+              <p className="text-slate-400 text-xs mt-1">Lengkapi data akun dan wilayah domisili Anda di bawah ini</p>
             </div>
 
             {errorMsg && (
@@ -135,16 +185,14 @@ export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted 
               {/* Nama Lengkap */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">Nama Lengkap *</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Contoh: Rudi Hermawan"
-                    className="w-full pl-4 pr-4 py-2.5 rounded-xl glass-input text-xs placeholder-slate-500"
-                  />
-                </div>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Contoh: Rudi Hermawan"
+                  className="w-full px-4 py-2.5 rounded-xl glass-input text-xs placeholder-slate-500"
+                />
               </div>
 
               {/* NIK & Telepon */}
@@ -173,7 +221,71 @@ export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted 
                 </div>
               </div>
 
-              {/* Email & Kota */}
+              {/* CASCADING REGIONAL SELECTORS: Kota/Kab ➔ Provinsi (Otomatis) ➔ Kecamatan ➔ Kelurahan */}
+              <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">Domisili Wilayah (Bogor & Sekitarnya)</span>
+                  <span className="text-[10px] text-slate-400">Jawa Barat</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Kota / Kabupaten */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Kota / Kabupaten *</label>
+                    <select
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl glass-input text-xs"
+                    >
+                      <option value="Kota Bogor">Kota Bogor</option>
+                      <option value="Kabupaten Bogor">Kabupaten Bogor</option>
+                    </select>
+                  </div>
+
+                  {/* Provinsi (Otomatis Terisi & Terkunci) */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Provinsi (Otomatis)</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={province}
+                      className="w-full px-3.5 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-400 text-xs font-semibold cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Kecamatan (Otomatis menyajikan daftar kecamatan di Kota/Kab terpilih) */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Kecamatan *</label>
+                    <select
+                      value={district}
+                      onChange={(e) => setDistrict(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl glass-input text-xs"
+                    >
+                      {districtsList.map((d) => (
+                        <option key={d.id} value={d.name}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Kelurahan / Desa (Otomatis mengikuti kecamatan terpilih) */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Kelurahan / Desa *</label>
+                    <select
+                      value={village}
+                      onChange={(e) => setVillage(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl glass-input text-xs"
+                    >
+                      {villagesList.map((v) => (
+                        <option key={v.id} value={v.name}>{v.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Email & Kata Sandi */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">Email Pelapor *</label>
@@ -187,28 +299,16 @@ export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted 
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">Kota / Kabupaten</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">Kata Sandi *</label>
                   <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Jakarta Selatan"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
                     className="w-full px-4 py-2.5 rounded-xl glass-input text-xs placeholder-slate-500"
                   />
                 </div>
-              </div>
-
-              {/* Kata Sandi */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">Kata Sandi *</label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-2.5 rounded-xl glass-input text-xs placeholder-slate-500"
-                />
               </div>
 
               {/* Submit Button */}

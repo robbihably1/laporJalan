@@ -3,12 +3,13 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useReports } from '../context/ReportContext';
 import { reportsApi } from '../services/api';
+import EditReportModal from './EditReportModal';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { 
   X, MapPin, Calendar, Clock, User, Phone, CheckCircle, 
   AlertCircle, FileText, ExternalLink, Image as ImageIcon, 
-  Maximize2, Eye, Download, Shield, Save, CheckCircle2, AlertOctagon 
+  Maximize2, Eye, Download, Shield, Save, CheckCircle2, AlertOctagon, Edit3 
 } from 'lucide-react';
 
 const damageMarkerIcon = new L.Icon({
@@ -26,9 +27,15 @@ export default function ReportDetailModal({ report, onClose }) {
   const isAdmin = user?.role === 'admin';
 
   const [isFullImageOpen, setIsFullImageOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(report?.status || 'Menunggu');
   const [adminNote, setAdminNote] = useState('');
   const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
+
+  // Check if report belongs to logged-in user or can be edited while status is 'Menunggu'
+  const isOwner = (report?.userId && user?.id && report.userId === user.id) ||
+                  (report?.userName && user?.name && report.userName.toLowerCase() === user.name.toLowerCase());
+  const canEdit = report?.status === 'Menunggu' && (isOwner || !isAdmin);
 
   // Sync selected status when report changes
   useEffect(() => {
@@ -116,7 +123,7 @@ export default function ReportDetailModal({ report, onClose }) {
 
   const modalContent = (
     <>
-      {/* MAIN DETAIL MODAL (Portaled to document.body, z-[9999] completely covers Header Navbar & BottomNav) */}
+      {/* MAIN DETAIL MODAL */}
       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md animate-fade-in overflow-y-auto">
         <div className="glass-card w-full max-w-3xl max-h-[90vh] rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl flex flex-col relative text-slate-100 my-auto">
           
@@ -126,6 +133,7 @@ export default function ReportDetailModal({ report, onClose }) {
               <span className="text-xs font-mono text-sky-400 font-bold">{report.id}</span>
               <h3 className="text-lg font-bold text-white mt-0.5">{report.title}</h3>
             </div>
+
             <button
               onClick={onClose}
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -157,7 +165,23 @@ export default function ReportDetailModal({ report, onClose }) {
               </div>
             </div>
 
-            {/* ADMIN PROCESSING ACTION PANEL (Only visible when user.role === 'admin') */}
+            {/* EDIT PERMISSION BANNER FOR CITIZEN USER WHEN STATUS IS 'Menunggu' */}
+            {canEdit && (
+              <div className="p-3.5 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs font-semibold flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 flex-shrink-0 text-sky-400" />
+                  <span>Status laporan masih <strong>Menunggu Verifikasi</strong>. Anda dapat mengedit rincian data laporan ini.</span>
+                </div>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-3.5 py-2 rounded-xl bg-sky-500 text-white font-bold text-xs hover:bg-sky-400 transition-all shadow-md active:scale-95 flex-shrink-0"
+                >
+                  Ubah Data
+                </button>
+              </div>
+            )}
+
+            {/* ADMIN PROCESSING ACTION PANEL */}
             {isAdmin && (
               <form onSubmit={handleAdminStatusUpdate} className="p-5 rounded-2xl bg-gradient-to-r from-indigo-950/60 via-slate-900 to-indigo-950/60 border border-indigo-500/30 space-y-4 shadow-xl">
                 <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
@@ -371,6 +395,18 @@ export default function ReportDetailModal({ report, onClose }) {
 
         </div>
       </div>
+
+      {/* EDIT REPORT MODAL */}
+      {isEditing && (
+        <EditReportModal
+          report={report}
+          onClose={() => setIsEditing(false)}
+          onUpdated={() => {
+            setIsEditing(false);
+            if (fetchReports) fetchReports();
+          }}
+        />
+      )}
 
       {/* FULL-SIZE IMAGE LIGHTBOX MODAL */}
       {isFullImageOpen && (

@@ -120,6 +120,13 @@ export const reportsApi = {
     });
   },
 
+  updateDetails: async (id, reportData) => {
+    return fetchApi(`/reports/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(reportData),
+    });
+  },
+
   updateStatus: async (id, status, note) => {
     return fetchApi(`/reports/${id}/status`, {
       method: 'PATCH',
@@ -143,5 +150,23 @@ export const adminApi = {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     });
+  },
+};
+
+// ----------------------------------------------------
+// REGIONS MASTER DATA API
+// ----------------------------------------------------
+export const regionsApi = {
+  getProvinces: async () => {
+    return fetchApi('/regions/provinces', { method: 'GET' });
+  },
+  getRegencies: async (provinceId = '32') => {
+    return fetchApi(`/regions/regencies?province_id=${provinceId}`, { method: 'GET' });
+  },
+  getDistricts: async (regencyName) => {
+    return fetchApi(`/regions/districts?regency_name=${encodeURIComponent(regencyName)}`, { method: 'GET' });
+  },
+  getVillages: async (districtName) => {
+    return fetchApi(`/regions/villages?district_name=${encodeURIComponent(districtName)}`, { method: 'GET' });
   },
 };

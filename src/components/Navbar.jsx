@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import UserProfileModal from './UserProfileModal';
 import { 
-  MapPin, PlusCircle, History, Map as MapIcon, LogOut, 
+  MapPin, History, Map as MapIcon, LogOut, 
   Users, Shield, User, ChevronDown, Settings, FileSpreadsheet 
 } from 'lucide-react';
 
@@ -32,7 +32,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
           
           {/* Logo & Brand */}
           <div 
-            onClick={() => setActiveTab(isAdmin ? 'history' : 'add')} 
+            onClick={() => setActiveTab('history')} 
             className="flex items-center gap-3 cursor-pointer group"
           >
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform ${
@@ -60,32 +60,20 @@ export default function Navbar({ activeTab, setActiveTab }) {
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-xl border border-slate-800/80">
             
-            {!isAdmin && (
-              <button
-                onClick={() => setActiveTab('add')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  activeTab === 'add'
-                    ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                }`}
-              >
-                <PlusCircle className="w-4 h-4" />
-                Tambah Laporan
-              </button>
-            )}
-
+            {/* Tab Pelaporan (Renamed from Histori) */}
             <button
               onClick={() => setActiveTab('history')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                activeTab === 'history'
+                activeTab === 'history' || activeTab === 'add'
                   ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
               }`}
             >
               <History className="w-4 h-4" />
-              {isAdmin ? 'Semua Laporan Warga' : 'Histori Pelaporan'}
+              {isAdmin ? 'Semua Laporan Warga' : 'Pelaporan'}
             </button>
 
+            {/* Tab Peta Sebaran */}
             <button
               onClick={() => setActiveTab('map')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
