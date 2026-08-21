@@ -27,7 +27,7 @@ export const INITIAL_REPORTS = [
     locationName: "Jl. Gatot Subroto Kav 18, Tebet",
     latitude: -6.2415,
     longitude: 106.8436,
-    photoUrl: "https://images.unsplash.com/photo-1584463699966-1c88019b8849?q=80&w=800&auto=format&fit=crop",
+    photoUrl: "https://images.unsplash.com/photo-1578575437130-527eed3abbec?q=80&w=800&auto=format&fit=crop",
     status: "Selesai",
     createdAt: "2026-08-10T08:15:00Z",
     userName: "Siti Rahma",

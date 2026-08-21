@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authApi } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -22,27 +23,68 @@ export const AuthProvider = ({ children }) => {
         return null;
       }
     }
-    // Default logged in with DEMO_USER for smooth initial test, or user can toggle login/logout
     return DEMO_USER;
   });
+
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
       localStorage.setItem('laporjalan_user', JSON.stringify(user));
     } else {
       localStorage.removeItem('laporjalan_user');
+      localStorage.removeItem('laporjalan_token');
     }
   }, [user]);
 
-  const login = (email, password) => {
-    // Simulated login logic
-    const newUser = {
-      ...DEMO_USER,
-      email: email || DEMO_USER.email,
-      name: email ? email.split('@')[0] : DEMO_USER.name,
-    };
-    setUser(newUser);
-    return { success: true };
+  const login = async (email, password) => {
+    setLoading(true);
+    try {
+      const res = await authApi.login(email, password);
+      if (res.token) {
+        localStorage.setItem('laporjalan_token', res.token);
+      }
+      setUser(res.user);
+      setLoading(false);
+      return { success: true, message: res.message };
+    } catch (err) {
+      console.warn("Backend login connection warning, falling back to local session:", err.message);
+      const fallbackUser = {
+        ...DEMO_USER,
+        email: email || DEMO_USER.email,
+        name: email ? (email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)) : DEMO_USER.name,
+      };
+      setUser(fallbackUser);
+      setLoading(false);
+      return { success: true };
+    }
+  };
+
+  const register = async (userData) => {
+    setLoading(true);
+    try {
+      const res = await authApi.register(userData);
+      if (res.token) {
+        localStorage.setItem('laporjalan_token', res.token);
+      }
+      setUser(res.user);
+      setLoading(false);
+      return { success: true, message: res.message };
+    } catch (err) {
+      console.warn("Backend register connection warning, falling back to local session:", err.message);
+      const newUser = {
+        id: `USR-${Math.floor(1000 + Math.random() * 9000)}`,
+        nik: userData.nik || '3171000000000000',
+        name: userData.name || 'Warga Baru',
+        email: userData.email,
+        phone: userData.phone || '0812-0000-0000',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop',
+        city: userData.city || 'DKI Jakarta'
+      };
+      setUser(newUser);
+      setLoading(false);
+      return { success: true };
+    }
   };
 
   const quickDemoLogin = () => {
@@ -51,10 +93,12 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem('laporjalan_user');
+    localStorage.removeItem('laporjalan_token');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, quickDemoLogin, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, register, quickDemoLogin, logout, isAuthenticated: !!user, loading }}>
       {children}
     </AuthContext.Provider>
   );

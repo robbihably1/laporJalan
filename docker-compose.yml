@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: laporjalan_mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: lapor_jalan_db
+      MYSQL_USER: lapor_user
+      MYSQL_PASSWORD: lapor_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    networks:
+      - laporjalan_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: laporjalan_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DB_HOST=mariadb
+      - DB_USER=lapor_user
+      - DB_PASSWORD=lapor_password
+      - DB_NAME=lapor_jalan_db
+      - DB_PORT=3306
+      - JWT_SECRET=laporjalan_super_secret_jwt_key_2026
+    depends_on:
+      - mariadb
+    networks:
+      - laporjalan_network
+
+volumes:
+  mariadb_data:
+
+networks:
+  laporjalan_network:
+    driver: bridge

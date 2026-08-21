@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { MapPin, ShieldAlert, Camera, ArrowRight, CheckCircle2, UserCheck, Sparkles } from 'lucide-react';
 
-export default function LoginPage() {
+export default function LoginPage({ onSwitchToRegister }) {
   const { login, quickDemoLogin } = useAuth();
   const [email, setEmail] = useState('budi.santoso@example.com');
   const [password, setPassword] = useState('12345678');
@@ -152,7 +152,14 @@ export default function LoginPage() {
             </button>
 
             <p className="text-center text-xs text-slate-500">
-              Belum punya akun? <a href="#register" onClick={(e) => { e.preventDefault(); quickDemoLogin(); }} className="text-sky-400 font-semibold hover:underline">Daftar Warga Baru</a>
+              Belum punya akun?{' '}
+              <button
+                type="button"
+                onClick={onSwitchToRegister}
+                className="text-sky-400 font-semibold hover:underline bg-transparent border-0 p-0 inline"
+              >
+                Daftar Warga Baru
+              </button>
             </p>
           </div>
         </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ReportProvider } from './context/ReportContext';
 import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import AddReportForm from './components/AddReportForm';
@@ -10,10 +11,14 @@ import MapView from './components/MapView';
 
 function MainAppContent() {
   const { isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState('add'); // 'add' (Add Laporan base menu), 'history', 'map'
+  const [activeTab, setActiveTab] = useState('add'); // 'add', 'history', 'map'
+  const [authView, setAuthView] = useState('login'); // 'login' or 'register'
 
   if (!isAuthenticated) {
-    return <LoginPage />;
+    if (authView === 'register') {
+      return <RegisterPage onSwitchToLogin={() => setAuthView('login')} />;
+    }
+    return <LoginPage onSwitchToRegister={() => setAuthView('register')} />;
   }
 
   return (

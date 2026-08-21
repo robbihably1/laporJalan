@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useReports } from '../context/ReportContext';
 import { useAuth } from '../context/AuthContext';
+import { uploadApi } from '../services/api';
 import LocationPickerMap from './LocationPickerMap';
 import { 
   Camera, MapPin, AlertTriangle, FileText, Send, Image as ImageIcon, 
-  Trash2, Navigation, Check, HelpCircle, Sparkles
+  Trash2, Navigation, Check, HelpCircle, Sparkles, Loader2
 } from 'lucide-react';
 
 const SAMPLE_PHOTOS = [
   { label: 'Lubang Jalan Parah', url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=800&auto=format&fit=crop' },
-  { label: 'Jalan Ambles/Erosi', url: 'https://images.unsplash.com/photo-1584463699966-1c88019b8849?q=80&w=800&auto=format&fit=crop' },
+  { label: 'Jalan Ambles/Erosi', url: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?q=80&w=800&auto=format&fit=crop' },
   { label: 'Retak Asfalt', url: 'https://images.unsplash.com/photo-1621929747188-0b4dc28498d2?q=80&w=800&auto=format&fit=crop' }
 ];
 
@@ -25,18 +26,30 @@ export default function AddReportForm({ onSuccess }) {
   const [latitude, setLatitude] = useState(-6.2088);
   const [longitude, setLongitude] = useState(106.8219);
   const [photoUrl, setPhotoUrl] = useState(SAMPLE_PHOTOS[0].url);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isGettingGps, setIsGettingGps] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // File Upload Handler
-  const handleImageUpload = (e) => {
+  // File Upload Handler (Clean File Upload to Server Disk)
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
+    if (!file) return;
+
+    setIsUploadingPhoto(true);
+    try {
+      const res = await uploadApi.uploadPhoto(file);
+      if (res && res.url) {
+        setPhotoUrl(res.url);
+      }
+    } catch (err) {
+      console.warn("Backend photo upload failed, fallback to local URL preview:", err.message);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPhotoUrl(reader.result);
       };
       reader.readAsDataURL(file);
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
@@ -53,7 +66,6 @@ export default function AddReportForm({ onSuccess }) {
         },
         (error) => {
           console.warn("GPS error:", error);
-          // Fallback to random offset near center for demo
           setLatitude(-6.2088 + (Math.random() - 0.5) * 0.01);
           setLongitude(106.8219 + (Math.random() - 0.5) * 0.01);
           setIsGettingGps(false);
@@ -70,7 +82,7 @@ export default function AddReportForm({ onSuccess }) {
     setLongitude(Number(lng.toFixed(6)));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!photoUrl) {
       alert("Harap sertakan foto bukti jalan rusak!");
@@ -78,8 +90,8 @@ export default function AddReportForm({ onSuccess }) {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      addReport({
+    try {
+      await addReport({
         title: title || `Laporan ${category}`,
         category,
         severity,
@@ -93,7 +105,9 @@ export default function AddReportForm({ onSuccess }) {
       });
       setIsSubmitting(false);
       if (onSuccess) onSuccess();
-    }, 700);
+    } catch (error) {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -128,7 +142,7 @@ export default function AddReportForm({ onSuccess }) {
               </div>
               <div>
                 <h3 className="text-base font-bold text-white">1. Lampiran Foto Bukti</h3>
-                <p className="text-xs text-slate-400">Unggah foto atau ambil gambar jalan rusak yang dilaporkan</p>
+                <p className="text-xs text-slate-400">Unggah foto langsung ke server (Disimpan sebagai URL singkat)</p>
               </div>
             </div>
             <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20">
@@ -137,7 +151,12 @@ export default function AddReportForm({ onSuccess }) {
           </div>
 
           {/* Photo Dropzone / Preview */}
-          {photoUrl ? (
+          {isUploadingPhoto ? (
+            <div className="h-64 rounded-xl border border-slate-800 bg-slate-900/80 flex flex-col items-center justify-center text-sky-400 space-y-2">
+              <Loader2 className="w-8 h-8 animate-spin" />
+              <span className="text-xs font-semibold">Mengunggah foto ke server...</span>
+            </div>
+          ) : photoUrl ? (
             <div className="relative rounded-xl overflow-hidden border border-slate-700 bg-slate-900 group">
               <img
                 src={photoUrl}
@@ -160,7 +179,7 @@ export default function AddReportForm({ onSuccess }) {
                 </button>
               </div>
               <div className="absolute bottom-3 left-3 bg-slate-950/80 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-400 flex items-center gap-1.5 border border-slate-800">
-                <Check className="w-4 h-4" /> Foto Terlampir
+                <Check className="w-4 h-4" /> Foto Terlampir ({photoUrl.startsWith('http') ? 'Server URL' : 'Data File'})
               </div>
             </div>
           ) : (
@@ -174,25 +193,35 @@ export default function AddReportForm({ onSuccess }) {
             </label>
           )}
 
-          {/* Quick Sample Photo Picker for Easy Test Drive */}
+          {/* Quick Sample Photo Picker */}
           <div className="pt-2">
-            <span className="text-xs text-slate-400 font-medium block mb-2">Atau pilih sampel foto uji coba cepat:</span>
-            <div className="grid grid-cols-3 gap-2">
-              {SAMPLE_PHOTOS.map((sample, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setPhotoUrl(sample.url)}
-                  className={`flex items-center gap-2 p-2 rounded-lg border text-left text-xs transition-all ${
-                    photoUrl === sample.url
-                      ? 'border-sky-500 bg-sky-500/10 text-sky-300 font-bold'
-                      : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
-                  }`}
-                >
-                  <img src={sample.url} alt={sample.label} className="w-8 h-8 rounded object-cover" />
-                  <span className="truncate">{sample.label}</span>
-                </button>
-              ))}
+            <span className="text-xs text-slate-400 font-medium block mb-2.5">Atau pilih sampel foto lokasi kerusakan:</span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {SAMPLE_PHOTOS.map((sample, idx) => {
+                const isSelected = photoUrl === sample.url;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setPhotoUrl(sample.url)}
+                    className={`flex items-center gap-3 p-2.5 rounded-xl border text-left text-xs transition-all duration-200 ${
+                      isSelected
+                        ? 'border-sky-500 bg-sky-500/15 text-sky-300 font-bold shadow-md shadow-sky-500/10 ring-1 ring-sky-500/40'
+                        : 'border-slate-800 bg-slate-900/70 text-slate-300 hover:border-slate-700 hover:bg-slate-800/80 hover:text-white'
+                    }`}
+                  >
+                    <img
+                      src={sample.url}
+                      alt={sample.label}
+                      className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-slate-700/80 shadow-xs"
+                    />
+                    <span className="truncate flex-1 leading-snug font-medium">{sample.label}</span>
+                    {isSelected && (
+                      <span className="w-2 h-2 rounded-full bg-sky-400 flex-shrink-0 animate-pulse"></span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -349,7 +378,7 @@ export default function AddReportForm({ onSuccess }) {
         <div className="pt-2">
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploadingPhoto}
             className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-600 to-sky-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-base shadow-xl shadow-sky-500/25 flex items-center justify-center gap-3 transition-all active:scale-[0.99] border border-sky-400/30"
           >
             {isSubmitting ? (

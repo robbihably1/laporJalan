@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { INITIAL_REPORTS } from '../data/initialReports';
+import { reportsApi } from '../services/api';
 
 const ReportContext = createContext();
 
@@ -17,17 +18,51 @@ export const ReportProvider = ({ children }) => {
   });
 
   const [toast, setToast] = useState(null);
-
-  useEffect(() => {
-    localStorage.setItem('laporjalan_reports', JSON.stringify(reports));
-  }, [reports]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
 
-  const addReport = (reportData) => {
+  // Fetch reports from Backend API
+  const fetchReports = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await reportsApi.getAll();
+      if (response && response.data && response.data.length > 0) {
+        setReports(response.data);
+      }
+    } catch (err) {
+      console.warn("Using offline / cached reports due to API notice:", err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
+
+  useEffect(() => {
+    localStorage.setItem('laporjalan_reports', JSON.stringify(reports));
+  }, [reports]);
+
+  // Add Report Handler (Backend Integrated)
+  const addReport = async (reportData) => {
+    try {
+      const apiResponse = await reportsApi.create(reportData);
+      if (apiResponse && apiResponse.data) {
+        const newReport = apiResponse.data;
+        setReports(prev => [newReport, ...prev]);
+        showToast(apiResponse.message || `Laporan #${newReport.id} berhasil dikirim!`, 'success');
+        return newReport;
+      }
+    } catch (err) {
+      console.warn("Backend add report warning, saving locally:", err.message);
+    }
+
+    // Local Fallback creation if backend server is offline
     const newId = `REP-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${String(reports.length + 1).padStart(3, '0')}`;
     
     const newReport = {
@@ -59,7 +94,7 @@ export const ReportProvider = ({ children }) => {
   };
 
   return (
-    <ReportContext.Provider value={{ reports, addReport, showToast, toast }}>
+    <ReportContext.Provider value={{ reports, addReport, showToast, toast, fetchReports, isLoading }}>
       {children}
       {/* Global Toast Notification */}
       {toast && (

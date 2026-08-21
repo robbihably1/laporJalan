@@ -1,33 +1,49 @@
 import React, { useState } from 'react';
 import { useReports } from '../context/ReportContext';
+import { useAuth } from '../context/AuthContext';
 import ReportDetailModal from './ReportDetailModal';
 import { 
   History, Search, Filter, MapPin, Calendar, Eye, 
-  CheckCircle2, Clock, AlertCircle, PlusCircle 
+  CheckCircle2, Clock, AlertCircle, PlusCircle, User, Globe 
 } from 'lucide-react';
 
 export default function HistoryList({ onAddNewReport }) {
   const { reports } = useReports();
+  const { user } = useAuth();
+  
+  const [scopeFilter, setScopeFilter] = useState('mine'); // 'mine' (Laporan Saya) | 'all' (Semua Laporan Publik)
   const [selectedStatus, setSelectedStatus] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeReport, setActiveReport] = useState(null);
 
-  // Filtering reports
+  // Filtering reports by session user scope, status, and search
   const filteredReports = reports.filter((rep) => {
+    const isMine = scopeFilter === 'all' || 
+      (rep.userId && user?.id && rep.userId === user.id) ||
+      (rep.userName && user?.name && rep.userName.toLowerCase() === user.name.toLowerCase());
+
     const matchesStatus = selectedStatus === 'Semua' || rep.status === selectedStatus;
     const matchesSearch = 
       rep.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       rep.locationName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       rep.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       rep.category.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
+
+    return isMine && matchesStatus && matchesSearch;
   });
 
-  // Count stats
-  const totalCount = reports.length;
-  const pendingCount = reports.filter(r => r.status === 'Menunggu').length;
-  const inProgressCount = reports.filter(r => r.status === 'Diproses').length;
-  const completedCount = reports.filter(r => r.status === 'Selesai').length;
+  // Base list according to scope
+  const scopedReports = reports.filter(rep => {
+    if (scopeFilter === 'all') return true;
+    return (rep.userId && user?.id && rep.userId === user.id) ||
+           (rep.userName && user?.name && rep.userName.toLowerCase() === user.name.toLowerCase());
+  });
+
+  // Count stats based on current scope
+  const totalCount = scopedReports.length;
+  const pendingCount = scopedReports.filter(r => r.status === 'Menunggu').length;
+  const inProgressCount = scopedReports.filter(r => r.status === 'Diproses').length;
+  const completedCount = scopedReports.filter(r => r.status === 'Selesai').length;
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -53,7 +69,7 @@ export default function HistoryList({ onAddNewReport }) {
             Histori Pelaporan Jalan
           </h2>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Pantau seluruh riwayat laporan jalan rusak dan progres penanganan dari dinas terkait.
+            Terhubung dengan sesi akun <strong className="text-slate-200">{user?.name || 'Pelapor'}</strong> ({user?.email})
           </p>
         </div>
 
@@ -64,6 +80,38 @@ export default function HistoryList({ onAddNewReport }) {
           <PlusCircle className="w-4 h-4" />
           Buat Laporan Baru
         </button>
+      </div>
+
+      {/* Scope Filter Tabs (Laporan Saya vs Semua Laporan Publik) */}
+      <div className="flex items-center justify-between gap-3 p-1.5 rounded-2xl bg-slate-900/90 border border-slate-800">
+        <div className="grid grid-cols-2 gap-1.5 w-full sm:w-80">
+          <button
+            onClick={() => setScopeFilter('mine')}
+            className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+              scopeFilter === 'mine'
+                ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white bg-transparent'
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            Laporan Saya
+          </button>
+          <button
+            onClick={() => setScopeFilter('all')}
+            className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+              scopeFilter === 'all'
+                ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white bg-transparent'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            Semua Laporan Publik
+          </button>
+        </div>
+
+        <span className="hidden sm:block text-xs text-slate-400 font-medium pr-3">
+          {scopeFilter === 'mine' ? `Menampilkan ${totalCount} laporan akun Anda` : `Menampilkan seluruh laporan publik`}
+        </span>
       </div>
 
       {/* Summary Stat Cards */}
@@ -128,7 +176,9 @@ export default function HistoryList({ onAddNewReport }) {
           </div>
           <h3 className="text-base font-bold text-white">Tidak Ada Laporan Ditemukan</h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            Tidak ada data histori laporan yang sesuai dengan filter atau pencarian Anda.
+            {scopeFilter === 'mine' 
+              ? 'Anda belum memiliki riwayat laporan untuk filter ini. Silakan buat laporan baru.'
+              : 'Tidak ada data laporan publik yang sesuai dengan filter atau pencarian Anda.'}
           </p>
         </div>
       ) : (
