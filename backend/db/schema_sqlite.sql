@@ -8,8 +8,18 @@ CREATE TABLE IF NOT EXISTS users (
     phone TEXT,
     avatar TEXT,
     city TEXT,
+    status TEXT NOT NULL DEFAULT 'Aktif',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS admin (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'admin',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS reports (
@@ -41,8 +51,18 @@ CREATE TABLE IF NOT EXISTS report_timelines (
     FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
 );
 
--- SEED DATA
-INSERT OR IGNORE INTO users (id, nik, name, email, password, phone, avatar, city) 
+-- SEED INITIAL ADMIN (Password: 'admin123')
+INSERT OR IGNORE INTO admin (id, name, email, password, role)
+VALUES (
+    'ADM-001',
+    'Admin Bina Marga',
+    'admin@laporjalan.go.id',
+    '$2a$10$vN0o5Y2P6hO6U3.qC3O6uO8f9Z5U5X5Y5Z5a5b5c5d5e5f5g5h',
+    'admin'
+);
+
+-- SEED INITIAL USER
+INSERT OR IGNORE INTO users (id, nik, name, email, password, phone, avatar, city, status) 
 VALUES (
     'USR-8821', 
     '3171021908950001', 
@@ -51,9 +71,11 @@ VALUES (
     '$2a$10$vN0o5Y2P6hO6U3.qC3O6uO8f9Z5U5X5Y5Z5a5b5c5d5e5f5g5h', 
     '0812-3456-7890', 
     'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop', 
-    'Jakarta Selatan'
+    'Jakarta Selatan',
+    'Aktif'
 );
 
+-- SEED INITIAL REPORTS
 INSERT OR IGNORE INTO reports (id, user_id, title, category, severity, description, location_name, latitude, longitude, photo_url, status, user_name, user_phone, created_at)
 VALUES 
 (
@@ -82,7 +104,7 @@ VALUES
     'Jl. Gatot Subroto Kav 18, Tebet',
     -6.24150000,
     106.84360000,
-    'https://images.unsplash.com/photo-1584463699966-1c88019b8849?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1578575437130-527eed3abbec?q=80&w=800&auto=format&fit=crop',
     'Selesai',
     'Siti Rahma',
     '0857-1122-3344',

@@ -27,10 +27,12 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 const authRoutes = require('./routes/authRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {

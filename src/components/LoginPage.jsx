@@ -1,20 +1,29 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, ShieldAlert, Camera, ArrowRight, CheckCircle2, UserCheck, Sparkles } from 'lucide-react';
+import { MapPin, ArrowRight, CheckCircle2, Sparkles, AlertTriangle, Camera } from 'lucide-react';
 
 export default function LoginPage({ onSwitchToRegister }) {
-  const { login, quickDemoLogin } = useAuth();
-  const [email, setEmail] = useState('budi.santoso@example.com');
-  const [password, setPassword] = useState('12345678');
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
     setIsLoading(true);
-    setTimeout(() => {
-      login(email, password);
+
+    try {
+      const res = await login(email, password);
       setIsLoading(false);
-    }, 600);
+      if (res && res.success === false) {
+        setErrorMessage(res.message || 'Gagal masuk akun. Periksa kembali email & password.');
+      }
+    } catch (err) {
+      setIsLoading(false);
+      setErrorMessage(err.message || 'Gagal masuk akun');
+    }
   };
 
   return (
@@ -81,15 +90,25 @@ export default function LoginPage({ onSwitchToRegister }) {
 
         {/* Right Side: Login Card */}
         <div className="lg:col-span-5">
-          <div className="glass-card p-6 sm:p-8 rounded-2xl shadow-2xl border border-slate-800/80 space-y-6">
+          <div className="glass-card p-6 sm:p-8 rounded-2xl shadow-2xl border border-slate-800/80 space-y-5">
             <div>
               <h2 className="text-2xl font-bold text-white">Masuk Akun</h2>
-              <p className="text-slate-400 text-sm mt-1">Silakan masuk untuk mulai membuat pelaporan jalan</p>
+              <p className="text-slate-400 text-xs mt-1">Silakan masuk untuk mulai menggunakan portal pelaporan</p>
             </div>
+
+            {/* Error Notification Alert */}
+            {errorMessage && (
+              <div className="p-4 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-start gap-3 animate-shake">
+                <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  {errorMessage}
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Email Pelapor</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Email Akun</label>
                 <input
                   type="email"
                   required
@@ -136,29 +155,18 @@ export default function LoginPage({ onSwitchToRegister }) {
               </button>
             </form>
 
-            <div className="relative flex items-center justify-center">
+            <div className="relative flex items-center justify-center pt-2">
               <div className="border-t border-slate-800 w-full"></div>
-              <span className="bg-slate-900 px-3 text-xs text-slate-500 uppercase font-medium absolute">Atau Akses Cepat</span>
             </div>
 
-            {/* Quick Demo Login Button */}
-            <button
-              onClick={quickDemoLogin}
-              type="button"
-              className="w-full py-3 px-4 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 text-xs font-semibold flex items-center justify-center gap-2 transition-all group"
-            >
-              <UserCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-              Masuk Cepat sebagai Demo User (Budi Santoso)
-            </button>
-
-            <p className="text-center text-xs text-slate-500">
-              Belum punya akun?{' '}
+            <p className="text-center text-xs text-slate-400 pt-1">
+              Belum punya akun warga?{' '}
               <button
                 type="button"
                 onClick={onSwitchToRegister}
                 className="text-sky-400 font-semibold hover:underline bg-transparent border-0 p-0 inline"
               >
-                Daftar Warga Baru
+                Daftar Warga Baru Sekarang
               </button>
             </p>
           </div>

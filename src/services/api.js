@@ -54,6 +54,13 @@ export const authApi = {
       method: 'GET',
     });
   },
+
+  updateProfile: async (profileData) => {
+    return fetchApi('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  },
 };
 
 // ----------------------------------------------------
@@ -104,6 +111,24 @@ export const reportsApi = {
     return fetchApi(`/reports/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status, note }),
+    });
+  },
+};
+
+// ----------------------------------------------------
+// ADMIN USER MANAGEMENT API
+// ----------------------------------------------------
+export const adminApi = {
+  getUsers: async () => {
+    return fetchApi('/admin/users', {
+      method: 'GET',
+    });
+  },
+
+  updateUserStatus: async (id, status) => {
+    return fetchApi(`/admin/users/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
     });
   },
 };

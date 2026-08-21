@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ReportProvider } from './context/ReportContext';
 import LoginPage from './components/LoginPage';
@@ -8,11 +8,21 @@ import BottomNav from './components/BottomNav';
 import AddReportForm from './components/AddReportForm';
 import HistoryList from './components/HistoryList';
 import MapView from './components/MapView';
+import AdminUsersList from './components/AdminUsersList';
 
 function MainAppContent() {
-  const { isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState('add'); // 'add', 'history', 'map'
+  const { user, isAuthenticated } = useAuth();
+  const isAdmin = user?.role === 'admin';
+
+  const [activeTab, setActiveTab] = useState('add'); // 'add', 'history', 'map', 'users'
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
+
+  // Set default tab when admin logs in
+  useEffect(() => {
+    if (isAdmin && activeTab === 'add') {
+      setActiveTab('history');
+    }
+  }, [isAdmin, activeTab]);
 
   if (!isAuthenticated) {
     if (authView === 'register') {
@@ -28,7 +38,7 @@ function MainAppContent() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {activeTab === 'add' && (
+        {activeTab === 'add' && !isAdmin && (
           <AddReportForm onSuccess={() => setActiveTab('history')} />
         )}
         {activeTab === 'history' && (
@@ -36,6 +46,9 @@ function MainAppContent() {
         )}
         {activeTab === 'map' && (
           <MapView />
+        )}
+        {activeTab === 'users' && isAdmin && (
+          <AdminUsersList />
         )}
       </main>
 
