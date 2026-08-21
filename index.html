@@ -6,6 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LaporJalan - Sistem Pelaporan Jalan Rusak Masyarakat</title>
     <meta name="description" content="Aplikasi pelaporan jalan rusak untuk masyarakat dengan penandaan lokasi GPS real-time, pengunggahan foto bukti, dan pemantauan histori penanganan." />
+    
+    <!-- Synchronous Early Theme Initialization (Prevents Dark Flash on Refresh) -->
+    <script>
+      (function() {
+        var savedTheme = localStorage.getItem('laporjalan_theme') || 'light';
+        if (savedTheme === 'light') {
+          document.documentElement.classList.add('light-theme');
+          document.documentElement.classList.remove('dark');
+        } else {
+          document.documentElement.classList.remove('light-theme');
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,5 +31,13 @@
   <body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen selection:bg-sky-500 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      (function() {
+        var savedTheme = localStorage.getItem('laporjalan_theme') || 'light';
+        if (savedTheme === 'light') {
+          document.body.classList.add('light-mode-active');
+        }
+      })();
+    </script>
   </body>
 </html>
