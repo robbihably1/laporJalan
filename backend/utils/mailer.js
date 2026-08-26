@@ -59,7 +59,7 @@ exports.sendActivationEmail = async (toEmail, name, token, req = null) => {
   baseUrl = String(baseUrl).replace(/\/+$/, '');
 
   const activationLink = `${baseUrl}/?verify_token=${token}`;
-  const senderEmail = process.env.SMTP_FROM || process.env.SMTP_USER || '"Dinas Bina Marga LaporJalan" <no-reply@laporjalan.go.id>';
+  const senderEmail = process.env.SMTP_FROM || process.env.SMTP_USER || '"Dinas Bina Marga LaporJalan" <robbihably10@gmail.com>';
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #1e293b; background-color: #0f172a; color: #f8fafc; border-radius: 12px;">

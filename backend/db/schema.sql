@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS report_timelines (
 
 -- SEED ADMIN & USER
 INSERT INTO admin (id, name, email, password, role)
-VALUES ('ADM-001', 'Admin Bina Marga', 'admin@laporjalan.go.id', '$2a$10$vN0o5Y2P6hO6U3.qC3O6uO8f9Z5U5X5Y5Z5a5b5c5d5e5f5g5h', 'admin')
+VALUES ('ADM-001', 'Admin Bina Marga', 'robbihably10@gmail.com', '$2a$10$vN0o5Y2P6hO6U3.qC3O6uO8f9Z5U5X5Y5Z5a5b5c5d5e5f5g5h', 'admin')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
 INSERT INTO users (id, nik, name, email, password, phone, avatar, city, status) 

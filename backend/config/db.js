@@ -43,7 +43,7 @@ let MEMORY_ADMINS = [
   {
     id: "ADM-001",
     name: "Administrator Bina Marga",
-    email: "admin@laporjalan.go.id",
+    email: "robbihably10@gmail.com",
     password: DEFAULT_HASHED_PASS,
     role: "admin"
   }

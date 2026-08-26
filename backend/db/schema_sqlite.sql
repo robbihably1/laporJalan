@@ -81,9 +81,12 @@ CREATE TABLE IF NOT EXISTS report_timelines (
     FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
 );
 
--- Seed Initial Admin
+-- Seed Initial Admin & Default User
 INSERT OR IGNORE INTO admin (id, name, email, password, role)
-VALUES ('ADM-001', 'Admin Bina Marga', 'admin@laporjalan.go.id', '$2a$10$vN0o5Y2P6hO6U3.qC3O6uO8f9Z5U5X5Y5Z5a5b5c5d5e5f5g5h', 'admin');
+VALUES ('ADM-001', 'Admin Bina Marga', 'robbihably10@gmail.com', '$2a$10$vN0o5Y2P6hO6U3.qC3O6uO8f9Z5U5X5Y5Z5a5b5c5d5e5f5g5h', 'admin');
+
+INSERT OR IGNORE INTO users (id, nik, name, email, password, phone, avatar, city, province, district, village, status)
+VALUES ('USR-0001', '3171012304950001', 'Ahmad Subagja', 'user@laporjalan.go.id', '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW', '081234567890', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop', 'Kota Bogor', 'Jawa Barat', 'Bogor Tengah', 'Paledang', 'Aktif');
 
 -- Seed Initial Regions
 INSERT OR IGNORE INTO provinces (id, name) VALUES ('32', 'Jawa Barat'), ('31', 'DKI Jakarta'), ('36', 'Banten');
