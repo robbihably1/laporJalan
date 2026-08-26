@@ -26,6 +26,96 @@ let mysqlPool = null;
 let dbInstance = null;
 let isSqliteReady = false;
 
+// Default hashed password for memory fallback ('123456')
+const DEFAULT_HASHED_PASS = '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW';
+
+// In-Memory Data Store fallback when running on Vercel Serverless without C++ native SQLite binary
+let MEMORY_USERS = [
+  {
+    id: "USR-0001",
+    nik: "3171012304950001",
+    name: "Ahmad Subagja",
+    email: "user@laporjalan.go.id",
+    password: DEFAULT_HASHED_PASS,
+    phone: "081234567890",
+    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop",
+    province: "Jawa Barat",
+    city: "Kota Bogor",
+    district: "Bogor Tengah",
+    village: "Paledang",
+    status: "Aktif",
+    role: "user"
+  },
+  {
+    id: "USR-ADMIN",
+    nik: "3171012304950000",
+    name: "Administrator Bina Marga",
+    email: "admin@laporjalan.go.id",
+    password: DEFAULT_HASHED_PASS,
+    phone: "081122334455",
+    avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=200&auto=format&fit=crop",
+    province: "Jawa Barat",
+    city: "Kota Bogor",
+    district: "Bogor Selatan",
+    village: "Batutulis",
+    status: "Aktif",
+    role: "admin"
+  }
+];
+
+let MEMORY_REPORTS = [
+  {
+    id: "REP-2026-0812-001",
+    title: "Lubang Dalam di Lampu Merah Jl. Sudirman",
+    category: "Jalan Berlubang",
+    severity: "Parah",
+    description: "Terdapat lubang berdiameter ~60cm dengan kedalaman 15cm persis di lajur kanan dekat perempatan lampu merah. Sangat membahayakan pengendara motor di malam hari.",
+    location_name: "Jl. Jend. Sudirman No. 42, Jakarta Pusat",
+    latitude: -6.2088,
+    longitude: 106.8219,
+    photo_url: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=800&auto=format&fit=crop",
+    status: "Diproses",
+    created_at: "2026-08-12 14:30:00",
+    user_name: "Ahmad Subagja",
+    user_phone: "081234567890"
+  },
+  {
+    id: "REP-2026-0810-002",
+    title: "Jalan Ambles Akibat Luapan Sungai Ciliwung",
+    category: "Jalan Ambles",
+    severity: "Darurat",
+    description: "Bahu jalan sepanjang 4 meter ambles ke arah bantaran sungai setelah hujan deras kemarin malam. Akses mobil terputus setengah badan jalan.",
+    location_name: "Jl. Lapangan Tembak, Cibubur, Jakarta Timur",
+    latitude: -6.3688,
+    longitude: 106.8919,
+    photo_url: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=800&auto=format&fit=crop",
+    status: "Menunggu",
+    created_at: "2026-08-10 09:15:00",
+    user_name: "Budi Santoso",
+    user_phone: "081987654321"
+  },
+  {
+    id: "REP-2026-0805-003",
+    title: "Retak Rambut Panjang di Akses Tol Jagorawi",
+    category: "Retak & Penerangan",
+    severity: "Sedang",
+    description: "Retakan memanjang sekitar 10 meter di lajur kiri. Belum parah tapi berpotensi terkelupas jika sering dilalui truk muatan berat.",
+    location_name: "Jl. Raya Bogor KM 28, Ciracas, Jakarta Timur",
+    latitude: -6.3288,
+    longitude: 106.8619,
+    photo_url: "https://images.unsplash.com/photo-1578575437130-527eed3abbec?q=80&w=800&auto=format&fit=crop",
+    status: "Selesai",
+    created_at: "2026-08-05 16:45:00",
+    user_name: "Siti Rahma",
+    user_phone: "085712345678"
+  }
+];
+
+let MEMORY_TIMELINES = [
+  { report_id: "REP-2026-0812-001", status: "Menunggu", note: "Laporan berhasil diterima oleh sistem.", timestamp: "2026-08-12 14:30:00" },
+  { report_id: "REP-2026-0812-001", status: "Diproses", note: "Tim verifikasi Dinas Bina Marga telah meninjau lokasi.", timestamp: "2026-08-13 10:00:00" }
+];
+
 // 1. Try Cloud MySQL Pool if credentials are provided
 if (process.env.DB_HOST) {
   try {
@@ -111,12 +201,102 @@ async function query(sql, params = []) {
     }
   }
 
-  console.warn("DB Query fallback mode (No active DB driver)");
+  // Safe Memory Data Engine Fallback for Vercel Serverless
+  const sqlUpper = sql.trim().toUpperCase();
+
+  if (sqlUpper.includes("FROM USERS")) {
+    if (sqlUpper.includes("WHERE EMAIL = ? OR (NIK = ?")) {
+      const email = params[0];
+      const nik = params[1];
+      const match = MEMORY_USERS.filter(u => u.email === email || (nik && u.nik === nik));
+      return [match];
+    }
+    if (sqlUpper.includes("WHERE VERIFICATION_TOKEN = ?")) {
+      const token = params[0];
+      const match = MEMORY_USERS.filter(u => u.verification_token === token);
+      return [match];
+    }
+    if (sqlUpper.includes("WHERE ID = ?")) {
+      const id = params[0];
+      const match = MEMORY_USERS.filter(u => u.id === id);
+      return [match];
+    }
+    if (sqlUpper.includes("WHERE EMAIL = ?")) {
+      const email = params[0];
+      const match = MEMORY_USERS.filter(u => u.email === email);
+      return [match];
+    }
+    return [MEMORY_USERS];
+  }
+
+  if (sqlUpper.includes("INSERT INTO USERS")) {
+    const newUser = {
+      id: params[0],
+      nik: params[1],
+      name: params[2],
+      email: params[3],
+      password: params[4],
+      phone: params[5],
+      avatar: params[6],
+      province: params[7],
+      city: params[8],
+      district: params[9],
+      village: params[10],
+      status: params[11] || 'Nonaktif',
+      verification_token: params[12],
+      role: 'user'
+    };
+    MEMORY_USERS.push(newUser);
+    return [{ affectedRows: 1 }];
+  }
+
+  if (sqlUpper.includes("UPDATE USERS SET STATUS = 'AKTIF'")) {
+    const token = params[0];
+    const user = MEMORY_USERS.find(u => u.verification_token === token);
+    if (user) {
+      user.status = 'Aktif';
+      user.verification_token = null;
+    }
+    return [{ affectedRows: 1 }];
+  }
+
+  if (sqlUpper.includes("FROM REPORTS")) {
+    let filtered = [...MEMORY_REPORTS];
+    if (params.length > 0 && sqlUpper.includes("WHERE STATUS = ?")) {
+      filtered = filtered.filter(r => r.status === params[0]);
+    }
+    return [filtered];
+  }
+
+  if (sqlUpper.includes("FROM REPORT_TIMELINES")) {
+    return [MEMORY_TIMELINES];
+  }
+
+  if (sqlUpper.includes("INSERT INTO REPORTS")) {
+    const newReport = {
+      id: params[0],
+      title: params[1],
+      category: params[2],
+      severity: params[3],
+      description: params[4],
+      location_name: params[5],
+      latitude: params[6],
+      longitude: params[7],
+      photo_url: params[8],
+      status: params[9] || 'Menunggu',
+      created_at: params[10] || new Date().toISOString(),
+      user_name: params[11] || 'Masyarakat',
+      user_phone: params[12] || '-'
+    };
+    MEMORY_REPORTS.unshift(newReport);
+    return [{ affectedRows: 1 }];
+  }
+
   return [[]];
 }
 
 async function checkConnection() {
-  return isSqliteReady || !!mysqlPool;
+  return isSqliteReady || !!mysqlPool || isVercel;
 }
 
 module.exports = {
