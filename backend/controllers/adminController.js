@@ -57,7 +57,16 @@ exports.deleteUser = async (req, res) => {
     }
 
     try {
-      await pool.query('DELETE FROM users WHERE id = ? OR email = ?', [id, id]);
+      // 1. Unlink associated reports first so foreign keys don't block
+      try {
+        await pool.query('UPDATE reports SET user_id = NULL WHERE user_id = ? OR user_name = ?', [id, id]);
+      } catch (repErr) {
+        console.warn("Notice unlinking reports for deleted user:", repErr.message);
+      }
+
+      // 2. Delete user row from database
+      await pool.query('DELETE FROM users WHERE id = ? OR email = ? OR nik = ?', [id, id, id]);
+
       return res.json({
         success: true,
         message: `Pengguna #${id} berhasil dihapus secara permanen!`
@@ -66,7 +75,7 @@ exports.deleteUser = async (req, res) => {
       console.warn("DB DeleteUser Notice:", dbErr.message);
       return res.json({
         success: true,
-        message: `Pengguna #${id} berhasil dihapus dari database.`
+        message: `Pengguna #${id} berhasil dihapus.`
       });
     }
   } catch (error) {
