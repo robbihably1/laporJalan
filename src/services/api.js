@@ -29,6 +29,14 @@ async function fetchApi(endpoint, options = {}) {
       headers,
     });
 
+    const contentType = response.headers.get('content-type') || '';
+    
+    if (!contentType.includes('application/json')) {
+      const rawText = await response.text();
+      console.warn(`[API] Endpoint ${endpoint} returned non-JSON (${response.status}):`, rawText.substring(0, 150));
+      throw new Error(`Gagal terhubung ke Server API (${response.status}). Periksa koneksi backend Anda.`);
+    }
+
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.message || 'Gagal memproses permintaan API');
