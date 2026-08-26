@@ -556,14 +556,14 @@ export default function HistoryList({ onAddNewReport }) {
                   <span className="hidden sm:inline">Buka Tab Baru</span>
                 </a>
 
-                {/* High-Visibility Red Close Button for Mobile & Desktop */}
+                {/* Clean Slate Close Button matching User View */}
                 <button
                   onClick={() => setPreviewPhotoReport(null)}
-                  className="p-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold border border-rose-400 shadow-xl transition-all active:scale-95 flex items-center justify-center flex-shrink-0"
+                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0 flex items-center justify-center border border-slate-700/60"
                   title="Tutup Preview Foto"
                   aria-label="Tutup"
                 >
-                  <X className="w-6 h-6 text-white stroke-[2.5]" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>

@@ -136,11 +136,11 @@ export default function ReportDetailModal({ report, onClose }) {
 
             <button
               onClick={onClose}
-              className="p-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-lg transition-all active:scale-95 flex-shrink-0 flex items-center justify-center border border-rose-400"
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0 flex items-center justify-center"
               title="Tutup Detail Laporan"
               aria-label="Tutup"
             >
-              <X className="w-5 h-5 text-white stroke-[2.5]" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
@@ -439,14 +439,14 @@ export default function ReportDetailModal({ report, onClose }) {
                   <span className="hidden sm:inline">Buka Tab Baru</span>
                 </a>
 
-                {/* High-Visibility Red Close Button */}
+                {/* Clean Slate Close Button matching User View */}
                 <button
                   onClick={() => setIsFullImageOpen(false)}
-                  className="p-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold border border-rose-400 shadow-xl transition-all active:scale-95 flex items-center justify-center flex-shrink-0"
+                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0 flex items-center justify-center border border-slate-700/60"
                   title="Tutup Preview Foto"
                   aria-label="Tutup"
                 >
-                  <X className="w-6 h-6 text-white stroke-[2.5]" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
