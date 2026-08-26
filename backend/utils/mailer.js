@@ -1,5 +1,9 @@
+const path = require('path');
 const nodemailer = require('nodemailer');
 const dotenv = require('dotenv');
+
+// Load environment variables from backend/.env or root .env
+dotenv.config({ path: path.join(__dirname, '../.env') });
 dotenv.config();
 
 let transporter = null;

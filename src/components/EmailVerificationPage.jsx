@@ -84,7 +84,7 @@ export default function EmailVerificationPage({ email, token, previewUrl, activa
             </span>
             <h2 className="text-2xl font-black text-white">Cek Email Anda Untuk Aktivasi</h2>
             <p className="text-slate-400 text-xs mt-2 leading-relaxed">
-              Email aktivasi akun telah dikirim ke alamat email berikut:
+              Email aktivasi asli telah dikirimkan ke alamat email berikut (bila tidak ada di Inbox utama, periksa juga folder <strong>Spam/Junk</strong>):
             </p>
             <div className="mt-2 py-2.5 px-4 rounded-xl bg-slate-900 border border-slate-800 text-sky-400 font-mono text-xs font-bold truncate shadow-inner">
               {email || 'user@example.com'}
@@ -106,7 +106,7 @@ export default function EmailVerificationPage({ email, token, previewUrl, activa
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <div className="flex items-center gap-2 text-sky-400 font-bold">
                 <Inbox className="w-4 h-4" />
-                <span>Simulasi Kotak Masuk (Inbox Email)</span>
+                <span>Kotak Masuk / Tombol Aktivasi Langsung</span>
               </div>
               <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
                 PESAN BARU MASUK
@@ -114,7 +114,7 @@ export default function EmailVerificationPage({ email, token, previewUrl, activa
             </div>
 
             <div className="space-y-1">
-              <p className="text-slate-300 font-semibold text-xs">Pengirim: <span className="text-slate-400 font-normal">Dinas Bina Marga (no-reply@laporjalan.go.id)</span></p>
+              <p className="text-slate-300 font-semibold text-xs">Pengirim: <span className="text-slate-400 font-normal">Dinas Bina Marga (robbihably10@gmail.com)</span></p>
               <p className="text-slate-300 font-semibold text-xs">Subjek: <span className="text-white font-bold">Aktivasi Akun LaporJalan Anda</span></p>
             </div>
 
