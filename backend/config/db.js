@@ -243,28 +243,34 @@ async function query(sql, params = []) {
   }
 
   if (sqlUpper.includes("FROM USERS")) {
+    let activeUsers = MEMORY_USERS.filter(u => 
+      !DELETED_USERS_SET.has(u.id) && 
+      !DELETED_USERS_SET.has(u.email) && 
+      (!u.nik || !DELETED_USERS_SET.has(u.nik))
+    );
+
     if (sqlUpper.includes("WHERE EMAIL = ? OR (NIK = ?")) {
       const email = params[0];
       const nik = params[1];
-      const match = MEMORY_USERS.filter(u => u.email === email || (nik && u.nik === nik));
+      const match = activeUsers.filter(u => u.email === email || (nik && u.nik === nik));
       return [match];
     }
     if (sqlUpper.includes("WHERE VERIFICATION_TOKEN = ?")) {
       const token = params[0];
-      const match = MEMORY_USERS.filter(u => u.verification_token === token);
+      const match = activeUsers.filter(u => u.verification_token === token);
       return [match];
     }
     if (sqlUpper.includes("WHERE ID = ?")) {
       const id = params[0];
-      const match = MEMORY_USERS.filter(u => u.id === id);
+      const match = activeUsers.filter(u => u.id === id);
       return [match];
     }
     if (sqlUpper.includes("WHERE EMAIL = ?")) {
       const email = params[0];
-      const match = MEMORY_USERS.filter(u => u.email === email);
+      const match = activeUsers.filter(u => u.email === email);
       return [match];
     }
-    return [MEMORY_USERS];
+    return [activeUsers];
   }
 
   if (sqlUpper.includes("INSERT INTO USERS")) {

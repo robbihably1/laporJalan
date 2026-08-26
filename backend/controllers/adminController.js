@@ -92,31 +92,59 @@ exports.deleteUser = async (req, res) => {
       return res.status(400).json({ success: false, message: 'ID User wajib disertakan!' });
     }
 
-    // Record deletion in global set
-    if (DELETED_USERS_SET) {
-      DELETED_USERS_SET.add(id);
+    let userId = id;
+    let userEmail = id;
+    let userNik = '';
+
+    // Find full user details from memory or database
+    if (Array.isArray(MEMORY_USERS)) {
+      const targetUser = MEMORY_USERS.find(u => u.id === id || u.email === id || u.nik === id);
+      if (targetUser) {
+        userId = targetUser.id || id;
+        userEmail = targetUser.email || id;
+        userNik = targetUser.nik || '';
+      }
     }
 
-    // Remove from memory users array
+    // Try finding user details from SQLite DB if not in memory
+    try {
+      const [rows] = await pool.query("SELECT id, email, nik FROM users WHERE id = ? OR email = ? OR (nik = ? AND nik != '')", [id, id, id]);
+      if (rows && rows.length > 0) {
+        userId = rows[0].id || userId;
+        userEmail = rows[0].email || userEmail;
+        userNik = rows[0].nik || userNik;
+      }
+    } catch (e) {
+      console.warn("Notice finding deleted user info:", e.message);
+    }
+
+    // Record ID, Email, and NIK in DELETED_USERS_SET so re-registration is not blocked
+    if (DELETED_USERS_SET) {
+      if (userId) DELETED_USERS_SET.add(userId);
+      if (userEmail) DELETED_USERS_SET.add(userEmail);
+      if (userNik) DELETED_USERS_SET.add(userNik);
+    }
+
+    // Completely remove user from MEMORY_USERS array
     if (Array.isArray(MEMORY_USERS)) {
-      const targetUser = MEMORY_USERS.find(u => u.id === id || u.email === id);
-      if (targetUser) {
-        if (targetUser.email) DELETED_USERS_SET.add(targetUser.email);
-        if (targetUser.id) DELETED_USERS_SET.add(targetUser.id);
-        if (targetUser.nik) DELETED_USERS_SET.add(targetUser.nik);
+      for (let i = MEMORY_USERS.length - 1; i >= 0; i--) {
+        const u = MEMORY_USERS[i];
+        if (u.id === userId || u.email === userEmail || (userNik && u.nik === userNik)) {
+          MEMORY_USERS.splice(i, 1);
+        }
       }
     }
 
     try {
       // 1. Unlink associated reports first so foreign keys don't block
       try {
-        await pool.query('UPDATE reports SET user_id = NULL WHERE user_id = ? OR user_name = ?', [id, id]);
+        await pool.query('UPDATE reports SET user_id = NULL WHERE user_id = ? OR user_name = ?', [userId, userEmail]);
       } catch (repErr) {
         console.warn("Notice unlinking reports for deleted user:", repErr.message);
       }
 
       // 2. Delete user row from database
-      await pool.query('DELETE FROM users WHERE id = ? OR email = ? OR nik = ?', [id, id, id]);
+      await pool.query("DELETE FROM users WHERE id = ? OR email = ? OR (nik = ? AND nik != '')", [userId, userEmail, userNik]);
 
       return res.json({
         success: true,

@@ -1,4 +1,4 @@
-const { pool, MEMORY_USERS } = require('../config/db');
+const { pool, MEMORY_USERS, DELETED_USERS_SET } = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sendActivationEmail } = require('../utils/mailer');
@@ -20,7 +20,11 @@ exports.register = async (req, res) => {
     const emailResult = await sendActivationEmail(email, name, verificationToken, req);
 
     try {
-      const [existing] = await pool.query("SELECT * FROM users WHERE email = ? OR (nik = ? AND nik != '')", [email, nik || '']);
+      let [existing] = await pool.query("SELECT * FROM users WHERE email = ? OR (nik = ? AND nik != '')", [email, nik || '']);
+      if (existing && Array.isArray(existing) && DELETED_USERS_SET) {
+        existing = existing.filter(u => !DELETED_USERS_SET.has(u.id) && !DELETED_USERS_SET.has(u.email) && !DELETED_USERS_SET.has(u.nik));
+      }
+
       if (existing && existing.length > 0) {
         return res.status(400).json({ success: false, message: 'Email atau NIK sudah terdaftar!' });
       }
