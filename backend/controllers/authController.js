@@ -47,7 +47,7 @@ exports.register = async (req, res) => {
         email,
         token: verificationToken,
         previewUrl: emailResult?.previewUrl || null,
-        activationLink: emailResult?.activationLink || `${req.protocol}://${req.get('host')}/?verify_token=${verificationToken}`,
+        activationLink: emailResult?.activationLink || `http://${req?.get ? req.get('host') : 'localhost:5173'}/?verify_token=${verificationToken}`,
         user: { id: userId, nik: userNik, name, email, phone, avatar: userAvatar, province: userProvince, city: userCity, district: userDistrict, village: userVillage, status: 'Nonaktif', role: 'user' }
       });
     } catch (dbErr) {

@@ -54,10 +54,15 @@ exports.sendActivationEmail = async (toEmail, name, token, req = null) => {
   let baseUrl = process.env.FRONTEND_URL;
 
   if (!baseUrl && req) {
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-    const host = req.headers['x-forwarded-host'] || req.get('host');
-    if (host) {
-      baseUrl = `${protocol}://${host}`;
+    try {
+      const headers = req.headers || {};
+      const protocol = headers['x-forwarded-proto'] || req.protocol || 'http';
+      const host = headers['x-forwarded-host'] || (typeof req.get === 'function' ? req.get('host') : null);
+      if (host) {
+        baseUrl = `${protocol}://${host}`;
+      }
+    } catch (e) {
+      console.warn("Base URL resolution warning:", e.message);
     }
   }
 
@@ -66,7 +71,7 @@ exports.sendActivationEmail = async (toEmail, name, token, req = null) => {
   }
 
   // Strip trailing slash
-  baseUrl = baseUrl.replace(/\/+$/, '');
+  baseUrl = String(baseUrl).replace(/\/+$/, '');
 
   const activationLink = `${baseUrl}/?verify_token=${token}`;
   const senderEmail = process.env.SMTP_FROM || process.env.SMTP_USER || '"Dinas Bina Marga LaporJalan" <no-reply@laporjalan.go.id>';
