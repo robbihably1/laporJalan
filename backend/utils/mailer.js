@@ -45,10 +45,16 @@ exports.sendActivationEmail = async (toEmail, name, token, req = null) => {
   if (!baseUrl && req) {
     try {
       const headers = req.headers || {};
-      const protocol = headers['x-forwarded-proto'] || req.protocol || 'http';
-      const host = headers['x-forwarded-host'] || (typeof req.get === 'function' ? req.get('host') : null);
-      if (host) {
-        baseUrl = `${protocol}://${host}`;
+      const origin = headers.origin || headers.referer;
+      if (origin) {
+        const urlObj = new URL(origin);
+        baseUrl = `${urlObj.protocol}//${urlObj.host}`;
+      } else {
+        const protocol = headers['x-forwarded-proto'] || req.protocol || 'http';
+        const host = headers['x-forwarded-host'] || (typeof req.get === 'function' ? req.get('host') : null);
+        if (host && !host.includes(':5000')) {
+          baseUrl = `${protocol}://${host}`;
+        }
       }
     } catch (e) {
       console.warn("Base URL resolution warning:", e.message);
