@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { authApi } from '../services/api';
 import { MapPin, ArrowRight, CheckCircle2, Sparkles, AlertTriangle, Camera } from 'lucide-react';
 import Logo from './Logo';
 
@@ -24,6 +25,35 @@ export default function LoginPage({ onSwitchToRegister }) {
     } catch (err) {
       setIsLoading(false);
       setErrorMessage(err.message || 'Gagal masuk akun');
+    }
+  };
+
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [isSubmittingForgot, setIsSubmittingForgot] = useState(false);
+  const [forgotAlertMsg, setForgotAlertMsg] = useState({ type: '', text: '' });
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    setForgotAlertMsg({ type: '', text: '' });
+
+    if (!forgotEmail) {
+      setForgotAlertMsg({ type: 'error', text: 'Harap masukkan alamat email Anda!' });
+      return;
+    }
+
+    setIsSubmittingForgot(true);
+    try {
+      const res = await authApi.requestPasswordReset(forgotEmail);
+      if (res && res.success) {
+        setForgotAlertMsg({ type: 'success', text: res.message || 'Tautan reset password berhasil dikirim ke email Anda!' });
+      } else {
+        setForgotAlertMsg({ type: 'error', text: res.message || 'Gagal mengirim permintaan reset password.' });
+      }
+    } catch (err) {
+      setForgotAlertMsg({ type: 'error', text: err.message || '⚠️ Email tidak terdaftar di sistem!' });
+    } finally {
+      setIsSubmittingForgot(false);
     }
   };
 
@@ -130,7 +160,17 @@ export default function LoginPage({ onSwitchToRegister }) {
                   <input type="checkbox" defaultChecked className="rounded bg-slate-800 border-slate-700 text-sky-500 focus:ring-sky-500" />
                   Ingat Saya
                 </label>
-                <a href="#forgot" onClick={(e) => e.preventDefault()} className="text-sky-400 hover:underline">Lupa password?</a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotAlertMsg({ type: '', text: '' });
+                    setForgotEmail(email || '');
+                    setShowForgotModal(true);
+                  }}
+                  className="text-sky-400 hover:underline bg-transparent border-0 p-0 text-xs font-semibold cursor-pointer"
+                >
+                  Lupa password?
+                </button>
               </div>
 
               <button
@@ -167,6 +207,71 @@ export default function LoginPage({ onSwitchToRegister }) {
         </div>
 
       </div>
+
+      {/* FORGOT PASSWORD MODAL */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-2xl animate-fade-in">
+          <div className="glass-card w-full max-w-md rounded-2xl border border-slate-800 p-6 sm:p-8 shadow-2xl relative text-slate-100 my-auto">
+            
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Lupa Kata Sandi Akun</h3>
+              <button
+                onClick={() => setShowForgotModal(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400 mb-5 leading-relaxed">
+              Masukkan alamat email akun Anda. Sistem akan memeriksa data dan mengirimkan tautan reset kata sandi jika akun Anda aktif.
+            </p>
+
+            {forgotAlertMsg.text && (
+              <div className={`p-3.5 rounded-xl text-xs font-semibold mb-4 leading-relaxed flex items-start gap-2 ${
+                forgotAlertMsg.type === 'success' 
+                  ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300' 
+                  : 'bg-rose-500/15 border border-rose-500/30 text-rose-300 animate-shake'
+              }`}>
+                <span>{forgotAlertMsg.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleForgotSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Alamat Email</label>
+                <input
+                  type="email"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="nama@email.com"
+                  className="w-full px-4 py-3 rounded-xl glass-input text-sm placeholder-slate-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="w-1/2 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingForgot}
+                  className="w-1/2 py-3 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isSubmittingForgot ? 'Memeriksa...' : 'Kirim Tautan'}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

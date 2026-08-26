@@ -91,6 +91,20 @@ export const authApi = {
       method: 'GET',
     });
   },
+
+  requestPasswordReset: async (email) => {
+    return fetchApi('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword: async (token, newPassword) => {
+    return fetchApi('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    });
+  },
 };
 
 // ----------------------------------------------------

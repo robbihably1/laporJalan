@@ -13,6 +13,7 @@ import HistoryList from './components/HistoryList';
 import MapView from './components/MapView';
 import AdminUsersList from './components/AdminUsersList';
 import AdminReportSummary from './components/AdminReportSummary';
+import ResetPasswordModal from './components/ResetPasswordModal';
 
 function MainAppContent() {
   const { user, isAuthenticated } = useAuth();
@@ -22,13 +23,18 @@ function MainAppContent() {
   const [activeTab, setActiveTab] = useState('history');
   const [authView, setAuthView] = useState('login'); // 'login', 'register', 'verify'
   const [pendingVerification, setPendingVerification] = useState({ email: '', token: '' });
+  const [activeResetToken, setActiveResetToken] = useState(null);
 
-  // Handle URL Query Parameter for Direct Email Activation Link (?verify_token=...)
+  // Handle URL Query Parameter for Direct Email Activation Link (?verify_token=...) & Reset Password Link (?reset_token=...)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const verifyToken = urlParams.get('verify_token') || urlParams.get('token');
+    const resetToken = urlParams.get('reset_token');
 
-    if (verifyToken) {
+    if (resetToken) {
+      setActiveResetToken(resetToken);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (verifyToken) {
       authApi.verifyEmail(verifyToken).then(() => {
         // Clean URL query parameters
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -78,7 +84,21 @@ function MainAppContent() {
       );
     }
 
-    return <LoginPage onSwitchToRegister={() => setAuthView('register')} />;
+    return (
+      <>
+        {activeResetToken && (
+          <ResetPasswordModal
+            token={activeResetToken}
+            onClose={() => setActiveResetToken(null)}
+            onSuccess={() => {
+              setActiveResetToken(null);
+              setAuthView('login');
+            }}
+          />
+        )}
+        <LoginPage onSwitchToRegister={() => setAuthView('register')} />
+      </>
+    );
   }
 
   // Authenticated Main Application Views

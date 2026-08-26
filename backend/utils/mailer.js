@@ -136,3 +136,98 @@ exports.sendActivationEmail = async (toEmail, name, token, req = null) => {
     };
   }
 };
+
+/**
+ * Send Password Reset Email
+ */
+exports.sendPasswordResetEmail = async (toEmail, name, token, req = null) => {
+  let baseUrl = process.env.FRONTEND_URL;
+
+  if (!baseUrl && req) {
+    try {
+      const headers = req.headers || {};
+      const origin = headers.origin || headers.referer;
+      if (origin) {
+        const urlObj = new URL(origin);
+        baseUrl = `${urlObj.protocol}//${urlObj.host}`;
+      } else {
+        const protocol = headers['x-forwarded-proto'] || req.protocol || 'http';
+        const host = headers['x-forwarded-host'] || (typeof req.get === 'function' ? req.get('host') : null);
+        if (host && !host.includes(':5000')) {
+          baseUrl = `${protocol}://${host}`;
+        }
+      }
+    } catch (e) {
+      console.warn("Base URL resolution warning:", e.message);
+    }
+  }
+
+  if (!baseUrl) {
+    baseUrl = 'http://localhost:5173';
+  }
+
+  baseUrl = String(baseUrl).replace(/\/+$/, '');
+  const resetLink = `${baseUrl}/?reset_token=${token}`;
+  const senderEmail = process.env.SMTP_FROM || process.env.SMTP_USER || '"Dinas Bina Marga LaporJalan" <robbihably10@gmail.com>';
+
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #1e293b; background-color: #0f172a; color: #f8fafc; border-radius: 12px;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h1 style="color: #38bdf8; margin: 0;">LaporJalan</h1>
+        <p style="color: #94a3b8; font-size: 14px; margin-top: 4px;">Sistem Informasi Pelaporan Jalan Rusak Masyarakat</p>
+      </div>
+      <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;" />
+      <h2 style="color: #ffffff;">Halo ${name || 'Warga'},</h2>
+      <p style="color: #cbd5e1; line-height: 1.6;">
+        Kami menerima permintaan untuk mereset kata sandi akun LaporJalan Anda. Silakan klik tombol di bawah ini untuk memperbarui password akun Anda:
+      </p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${resetLink}" style="background: linear-gradient(135deg, #e11d48, #6366f1); color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3);">
+          Reset Kata Sandi Akun
+        </a>
+      </div>
+      <p style="color: #94a3b8; font-size: 12px; line-height: 1.5;">
+        Atau salin dan tempel link berikut pada browser Anda:<br />
+        <a href="${resetLink}" style="color: #38bdf8; word-break: break-all;">${resetLink}</a>
+      </p>
+      <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;" />
+      <p style="color: #64748b; font-size: 11px; text-align: center;">
+        Jika Anda tidak merasa meminta reset password, abaikan saja email ini. Kata sandi Anda akan tetap aman.
+      </p>
+    </div>
+  `;
+
+  try {
+    if (!transporter) await initMailer();
+
+    const info = await transporter.sendMail({
+      from: senderEmail,
+      to: toEmail,
+      subject: 'Permintaan Reset Kata Sandi Akun LaporJalan',
+      html: htmlContent,
+    });
+
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    console.log(`===================================================`);
+    console.log(` Password Reset Email sent to: ${toEmail}`);
+    if (previewUrl) {
+      console.log(` LIVE INBOX PREVIEW LINK: ${previewUrl}`);
+    }
+    console.log(` Direct Reset Link     : ${resetLink}`);
+    console.log(`===================================================`);
+
+    return {
+      success: true,
+      messageId: info.messageId,
+      previewUrl: previewUrl || resetLink,
+      resetLink
+    };
+  } catch (err) {
+    console.error(' Error sending password reset email:', err.message);
+    return {
+      success: false,
+      resetLink,
+      error: err.message
+    };
+  }
+};

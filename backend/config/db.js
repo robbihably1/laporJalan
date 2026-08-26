@@ -438,6 +438,11 @@ async function query(sql, params = []) {
       const match = activeUsers.filter(u => u.verification_token === token);
       return [match];
     }
+    if (sqlUpper.includes("WHERE RESET_TOKEN = ?")) {
+      const token = params[0];
+      const match = activeUsers.filter(u => u.reset_token === token);
+      return [match];
+    }
     if (sqlUpper.includes("WHERE ID = ?")) {
       const id = params[0];
       const match = activeUsers.filter(u => u.id === id);
@@ -469,6 +474,27 @@ async function query(sql, params = []) {
       role: 'user'
     };
     MEMORY_USERS.push(newUser);
+    return [{ affectedRows: 1 }];
+  }
+
+  if (sqlUpper.includes("UPDATE USERS SET RESET_TOKEN = ?")) {
+    const token = params[0];
+    const targetId = params[1] || params[2];
+    const user = MEMORY_USERS.find(u => u.id === targetId || u.email === targetId);
+    if (user) {
+      user.reset_token = token;
+    }
+    return [{ affectedRows: 1 }];
+  }
+
+  if (sqlUpper.includes("UPDATE USERS SET PASSWORD = ?")) {
+    const newPass = params[0];
+    const targetId = params[1] || params[2];
+    const user = MEMORY_USERS.find(u => u.id === targetId || u.email === targetId || u.reset_token === targetId);
+    if (user) {
+      user.password = newPass;
+      user.reset_token = null;
+    }
     return [{ affectedRows: 1 }];
   }
 

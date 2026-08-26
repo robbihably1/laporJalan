@@ -369,3 +369,147 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({ success: false, message: 'Gagal memperbarui profil: ' + error.message });
   }
 };
+
+// 7. Request Password Reset (Forgot Password)
+exports.requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Harap masukkan alamat email Anda!' });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    // 1. Check if email exists in users or admin
+    let userObj = null;
+    let targetTable = 'users';
+
+    try {
+      const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [cleanEmail]);
+      if (rows && Array.isArray(rows) && rows.length > 0) {
+        userObj = rows[0];
+        targetTable = 'users';
+      } else {
+        const [adminRows] = await pool.query('SELECT * FROM admin WHERE email = ?', [cleanEmail]);
+        if (adminRows && Array.isArray(adminRows) && adminRows.length > 0) {
+          userObj = adminRows[0];
+          targetTable = 'admin';
+        }
+      }
+    } catch (dbErr) {
+      console.warn("DB ForgotPassword Check Error:", dbErr.message);
+    }
+
+    if (!userObj && Array.isArray(MEMORY_USERS)) {
+      userObj = MEMORY_USERS.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+      targetTable = 'users';
+    }
+
+    // Check if deleted
+    if (userObj && DELETED_USERS_SET && (DELETED_USERS_SET.has(userObj.id) || DELETED_USERS_SET.has(userObj.email))) {
+      userObj = null;
+    }
+
+    // Alert 1: Email not found
+    if (!userObj) {
+      return res.status(404).json({ success: false, message: '⚠️ Email tidak terdaftar di sistem!' });
+    }
+
+    // Alert 2: Account not active
+    if (userObj.status === 'Nonaktif') {
+      return res.status(400).json({ success: false, message: '⚠️ Akun belum aktif. Harap verifikasi email pendaftaran terlebih dahulu!' });
+    }
+
+    // Generate reset token
+    const resetToken = 'rtoken_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+
+    // Save reset token in DB & Memory
+    try {
+      await pool.query(`UPDATE ${targetTable} SET reset_token = ? WHERE id = ? OR email = ?`, [resetToken, userObj.id, cleanEmail]);
+    } catch (e) {
+      console.warn("DB reset_token update notice:", e.message);
+    }
+
+    userObj.reset_token = resetToken;
+    userObj._targetTable = targetTable;
+
+    // Send email with reset token link
+    const { sendPasswordResetEmail } = require('../utils/mailer');
+    const sendResult = await sendPasswordResetEmail(cleanEmail, userObj.name, resetToken, req);
+
+    return res.json({
+      success: true,
+      message: 'Tautan reset password berhasil dikirim ke email Anda! Silakan periksa kotak masuk email.',
+      resetLink: sendResult.resetLink,
+      previewUrl: sendResult.previewUrl
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Gagal memproses permintaan reset password: ' + error.message });
+  }
+};
+
+// 8. Submit New Password Reset
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Token reset dan Password Baru wajib diisi!' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password minimal harus 6 karakter!' });
+    }
+
+    const cleanToken = String(token).trim();
+
+    // 1. Find user by reset_token in users or admin
+    let userObj = null;
+    let targetTable = 'users';
+
+    try {
+      const [rows] = await pool.query('SELECT * FROM users WHERE reset_token = ?', [cleanToken]);
+      if (rows && Array.isArray(rows) && rows.length > 0) {
+        userObj = rows[0];
+        targetTable = 'users';
+      } else {
+        const [adminRows] = await pool.query('SELECT * FROM admin WHERE reset_token = ?', [cleanToken]);
+        if (adminRows && Array.isArray(adminRows) && adminRows.length > 0) {
+          userObj = adminRows[0];
+          targetTable = 'admin';
+        }
+      }
+    } catch (dbErr) {
+      console.warn("DB resetPassword check error:", dbErr.message);
+    }
+
+    if (!userObj && Array.isArray(MEMORY_USERS)) {
+      userObj = MEMORY_USERS.find(u => u.reset_token === cleanToken);
+      targetTable = 'users';
+    }
+
+    if (!userObj) {
+      return res.status(400).json({ success: false, message: 'Tautan reset password tidak valid atau sudah kadaluarsa!' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password in DB and clear reset_token
+    try {
+      await pool.query(`UPDATE ${targetTable} SET password = ?, reset_token = NULL WHERE id = ? OR email = ?`, [hashedPassword, userObj.id, userObj.email]);
+    } catch (dbErr) {
+      console.warn("DB update password error:", dbErr.message);
+    }
+
+    userObj.password = hashedPassword;
+    userObj.reset_token = null;
+
+    return res.json({
+      success: true,
+      message: 'Password Anda berhasil diperbarui! Silakan login dengan password baru Anda.'
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Gagal memperbarui password: ' + error.message });
+  }
+};

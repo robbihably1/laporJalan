@@ -13,4 +13,8 @@ router.get('/verify-email', authController.verifyEmail);
 router.post('/verify-email', authController.verifyEmail);
 router.get('/check-verification', authController.checkVerificationStatus);
 
+// Forgot Password & Reset Password Endpoints
+router.post('/forgot-password', authController.requestPasswordReset);
+router.post('/reset-password', authController.resetPassword);
+
 module.exports = router;
