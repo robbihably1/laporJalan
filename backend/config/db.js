@@ -527,6 +527,28 @@ async function query(sql, params = []) {
     return [{ affectedRows: 1 }];
   }
 
+  if (sqlUpper.includes("UPDATE REPORTS")) {
+    const reportId = params[params.length - 1];
+    const report = MEMORY_REPORTS.find(r => r.id === reportId);
+    if (report) {
+      if (sqlUpper.includes("SET TITLE =") || sqlUpper.includes("TITLE =")) {
+        report.title = params[0] || report.title;
+        report.category = params[1] || report.category;
+        report.severity = params[2] || report.severity;
+        report.description = params[3] || report.description;
+        report.location_name = params[4] || report.location_name || report.locationName;
+        report.latitude = params[5] !== undefined ? params[5] : report.latitude;
+        report.longitude = params[6] !== undefined ? params[6] : report.longitude;
+        report.photo_url = params[7] || report.photo_url || report.photoUrl;
+        report.locationName = report.location_name;
+        report.photoUrl = report.photo_url;
+      } else if (sqlUpper.includes("SET STATUS =")) {
+        report.status = params[0];
+      }
+    }
+    return [{ affectedRows: 1 }];
+  }
+
   if (sqlUpper.includes("DELETE FROM USERS")) {
     const targetId = params[0];
     MEMORY_USERS = MEMORY_USERS.filter(u => u.id !== targetId && u.email !== targetId);

@@ -358,12 +358,21 @@ exports.updateReportDetails = async (req, res) => {
 
     try {
       // 1. Check if report exists and status is 'Menunggu'
+      let currentReport = null;
       const [existingRows] = await pool.query('SELECT * FROM reports WHERE id = ?', [id]);
-      if (!existingRows || existingRows.length === 0) {
+      if (existingRows && existingRows.length > 0) {
+        currentReport = existingRows[0];
+      }
+
+      const { MEMORY_REPORTS } = require('../config/db');
+      if (!currentReport && Array.isArray(MEMORY_REPORTS)) {
+        currentReport = MEMORY_REPORTS.find(r => r.id === id);
+      }
+
+      if (!currentReport) {
         return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan!' });
       }
 
-      const currentReport = existingRows[0];
       if (currentReport.status !== 'Menunggu') {
         return res.status(400).json({
           success: false,
@@ -371,51 +380,87 @@ exports.updateReportDetails = async (req, res) => {
         });
       }
 
-      // 2. Update report fields
+      const updatedTitle = title || currentReport.title;
+      const updatedCategory = category || currentReport.category;
+      const updatedSeverity = severity || currentReport.severity;
+      const updatedDescription = description || currentReport.description;
+      const updatedLocationName = locationName || currentReport.location_name || currentReport.locationName;
+      const updatedLat = latitude !== undefined && latitude !== null ? parseFloat(latitude) : parseFloat(currentReport.latitude);
+      const updatedLng = longitude !== undefined && longitude !== null ? parseFloat(longitude) : parseFloat(currentReport.longitude);
+      const updatedPhotoUrl = photoUrl || currentReport.photo_url || currentReport.photoUrl;
+
+      // 2. Update report fields in DB
       await pool.query(
         `UPDATE reports 
          SET title = ?, category = ?, severity = ?, description = ?, location_name = ?, latitude = ?, longitude = ?, photo_url = ?
          WHERE id = ?`,
         [
-          title || currentReport.title,
-          category || currentReport.category,
-          severity || currentReport.severity,
-          description || currentReport.description,
-          locationName || currentReport.location_name,
-          latitude !== undefined ? latitude : currentReport.latitude,
-          longitude !== undefined ? longitude : currentReport.longitude,
-          photoUrl || currentReport.photo_url,
+          updatedTitle,
+          updatedCategory,
+          updatedSeverity,
+          updatedDescription,
+          updatedLocationName,
+          updatedLat,
+          updatedLng,
+          updatedPhotoUrl,
           id
         ]
       );
 
+      // Also update in-memory object if present
+      if (Array.isArray(MEMORY_REPORTS)) {
+        const memReport = MEMORY_REPORTS.find(r => r.id === id);
+        if (memReport) {
+          memReport.title = updatedTitle;
+          memReport.category = updatedCategory;
+          memReport.severity = updatedSeverity;
+          memReport.description = updatedDescription;
+          memReport.location_name = updatedLocationName;
+          memReport.locationName = updatedLocationName;
+          memReport.latitude = updatedLat;
+          memReport.longitude = updatedLng;
+          memReport.photo_url = updatedPhotoUrl;
+          memReport.photoUrl = updatedPhotoUrl;
+        }
+      }
+
       // 3. Insert timeline record for edit activity
-      await pool.query(
-        `INSERT INTO report_timelines (report_id, status, note, timestamp)
-         VALUES (?, ?, ?, ?)`,
-        [id, 'Menunggu', 'Pengguna memperbarui rincian data pengajuan laporan.', formattedTimestamp]
-      );
+      try {
+        await pool.query(
+          `INSERT INTO report_timelines (report_id, status, note, timestamp)
+           VALUES (?, ?, ?, ?)`,
+          [id, 'Menunggu', 'Pengguna memperbarui rincian data pengajuan laporan.', formattedTimestamp]
+        );
+      } catch (e) {}
 
       // 4. Fetch updated report object with full timeline
-      const [updatedRows] = await pool.query('SELECT * FROM reports WHERE id = ?', [id]);
-      const [timelineRows] = await pool.query('SELECT status, note, timestamp FROM report_timelines WHERE report_id = ? ORDER BY id ASC', [id]);
+      let updatedRows = [];
+      let timelineRows = [];
+      try {
+        const [u] = await pool.query('SELECT * FROM reports WHERE id = ?', [id]);
+        updatedRows = u;
+        const [t] = await pool.query('SELECT status, note, timestamp FROM report_timelines WHERE report_id = ? ORDER BY id ASC', [id]);
+        timelineRows = t;
+      } catch (e) {}
+
+      const targetRow = (updatedRows && updatedRows.length > 0) ? updatedRows[0] : currentReport;
 
       const updatedReportObj = {
-        id: updatedRows[0].id,
-        title: updatedRows[0].title,
-        category: updatedRows[0].category,
-        severity: updatedRows[0].severity,
-        description: updatedRows[0].description,
-        locationName: updatedRows[0].location_name,
-        latitude: Number(updatedRows[0].latitude),
-        longitude: Number(updatedRows[0].longitude),
-        photoUrl: updatedRows[0].photo_url,
-        status: updatedRows[0].status,
-        createdAt: updatedRows[0].created_at,
-        userName: updatedRows[0].user_name,
-        userPhone: updatedRows[0].user_phone,
-        userId: updatedRows[0].user_id,
-        timeline: timelineRows
+        id: targetRow.id,
+        title: updatedTitle,
+        category: updatedCategory,
+        severity: updatedSeverity,
+        description: updatedDescription,
+        locationName: updatedLocationName,
+        latitude: updatedLat,
+        longitude: updatedLng,
+        photoUrl: updatedPhotoUrl,
+        status: targetRow.status || 'Menunggu',
+        createdAt: targetRow.created_at || targetRow.createdAt,
+        userName: targetRow.user_name || targetRow.userName || 'Masyarakat',
+        userPhone: targetRow.user_phone || targetRow.userPhone || '-',
+        userId: targetRow.user_id || targetRow.userId,
+        timeline: (timelineRows && timelineRows.length > 0) ? timelineRows : (targetRow.timeline || [])
       };
 
       return res.json({
