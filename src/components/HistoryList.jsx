@@ -352,7 +352,24 @@ export default function HistoryList({ onAddNewReport }) {
       </div>
 
       {/* Reports Display (Card Grid vs Table List) */}
-      {filteredReports.length === 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <div key={n} className="glass-card rounded-2xl border border-slate-800/80 p-4 space-y-4 animate-pulse">
+              <div className="h-44 w-full bg-slate-800/60 rounded-xl"></div>
+              <div className="space-y-2">
+                <div className="h-4 w-1/3 bg-slate-800/60 rounded"></div>
+                <div className="h-5 w-3/4 bg-slate-800/60 rounded"></div>
+                <div className="h-3 w-1/2 bg-slate-800/60 rounded"></div>
+              </div>
+              <div className="pt-3 border-t border-slate-800/60 space-y-2">
+                <div className="h-3 w-full bg-slate-800/60 rounded"></div>
+                <div className="h-3 w-2/3 bg-slate-800/60 rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filteredReports.length === 0 ? (
         <div className="glass-card p-12 text-center rounded-2xl border border-slate-800 space-y-3">
           <History className="w-12 h-12 text-slate-600 mx-auto" />
           <h3 className="text-base font-bold text-slate-300">Belum Ada Data Laporan</h3>

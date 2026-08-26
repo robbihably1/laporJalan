@@ -5,9 +5,9 @@ import { reportsApi } from '../services/api';
 const ReportContext = createContext();
 
 export const ReportProvider = ({ children }) => {
-  const [reports, setReports] = useState(INITIAL_REPORTS);
+  const [reports, setReports] = useState([]);
   const [toast, setToast] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -21,9 +21,11 @@ export const ReportProvider = ({ children }) => {
       const response = await reportsApi.getAll();
       if (response && response.data && Array.isArray(response.data)) {
         setReports(response.data);
+      } else {
+        setReports([]);
       }
     } catch (err) {
-      console.warn("Using offline / cached reports due to API notice:", err.message);
+      console.warn("API fetch notice:", err.message);
     } finally {
       setIsLoading(false);
     }
