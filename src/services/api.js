@@ -1,6 +1,15 @@
-// API Helper Service for LaporJalan Backend Integration
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  // If running in browser and deployed on Vercel or public host, use relative '/api'
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return '/api';
+  }
+  return 'http://localhost:5000/api';
+};
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = getApiBaseUrl();
 
 /**
  * Custom fetch wrapper with automatic headers & JSON parsing
