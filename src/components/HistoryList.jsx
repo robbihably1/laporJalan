@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useReports } from '../context/ReportContext';
 import { useAuth } from '../context/AuthContext';
 import ReportDetailModal from './ReportDetailModal';
@@ -16,6 +17,18 @@ export default function HistoryList({ onAddNewReport }) {
 
   const [activeReport, setActiveReport] = useState(null);
   const [previewPhotoReport, setPreviewPhotoReport] = useState(null);
+
+  // Lock body scroll when attachment preview modal is active
+  useEffect(() => {
+    if (previewPhotoReport) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [previewPhotoReport]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Semua');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
@@ -527,15 +540,15 @@ export default function HistoryList({ onAddNewReport }) {
         />
       )}
 
-      {/* Standalone Attachment Lightbox Modal */}
-      {previewPhotoReport && (
+      {/* Standalone Attachment Lightbox Modal rendered at document.body with z-[99999] */}
+      {previewPhotoReport && createPortal(
         <div 
           onClick={() => setPreviewPhotoReport(null)}
-          className="fixed inset-0 z-[10000] flex flex-col items-center justify-center p-3 sm:p-6 pt-16 bg-slate-950/95 backdrop-blur-xl animate-fade-in"
+          className="fixed inset-0 z-[99999] flex flex-col items-center justify-center p-3 sm:p-6 bg-slate-950/98 backdrop-blur-2xl animate-fade-in"
         >
           <div 
             onClick={(e) => e.stopPropagation()} 
-            className="relative max-w-5xl w-full max-h-[calc(100vh-5rem)] flex flex-col items-center justify-center my-auto"
+            className="relative max-w-5xl w-full max-h-[92vh] flex flex-col items-center justify-center my-auto"
           >
             
             {/* Top Toolbar */}
@@ -569,16 +582,17 @@ export default function HistoryList({ onAddNewReport }) {
             </div>
 
             {/* Image Viewer Container */}
-            <div className="rounded-2xl overflow-hidden border border-slate-800/80 bg-slate-900/90 shadow-2xl flex items-center justify-center p-2 max-h-[72vh] w-full">
+            <div className="rounded-2xl overflow-hidden border border-slate-800/80 bg-slate-900/90 shadow-2xl flex items-center justify-center p-2 max-h-[82vh] w-full">
               <img
                 src={previewPhotoReport.photoUrl || previewPhotoReport.image}
                 alt={previewPhotoReport.title}
-                className="max-h-[68vh] max-w-full w-auto h-auto object-contain rounded-xl shadow-lg"
+                className="max-h-[78vh] max-w-full w-auto h-auto object-contain rounded-xl shadow-lg"
               />
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

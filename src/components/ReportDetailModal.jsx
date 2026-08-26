@@ -414,7 +414,7 @@ export default function ReportDetailModal({ report, onClose }) {
       {isFullImageOpen && (
         <div 
           onClick={() => setIsFullImageOpen(false)}
-          className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-6 bg-slate-950/95 backdrop-blur-xl animate-fade-in"
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 bg-slate-950/98 backdrop-blur-2xl animate-fade-in"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
