@@ -257,12 +257,17 @@
    - Secondary / Cancel buttons -> LIGHT BG (#f1f5f9) + DARK SLATE TEXT (#0f172a)
    ========================================================= */
 
-/* 1. All Active Navigation Buttons (Kelola Users, Rekap Laporan, Pelaporan, Peta) -> BOGOR EMERALD GREEN */
+/* 1. All Active Navigation Buttons & Action Links (Kelola Users, Rekap Laporan, Pelaporan, Peta, Buka Tab Baru) -> BOGOR EMERALD GREEN */
 .light-theme button.bg-sky-500,
 .light-theme button.bg-emerald-600,
 .light-theme button.bg-emerald-500,
 .light-theme button.bg-indigo-600,
 .light-theme button.bg-indigo-500,
+.light-theme a.bg-sky-500,
+.light-theme a.bg-emerald-600,
+.light-theme a.bg-emerald-500,
+.light-theme a.bg-indigo-600,
+.light-theme a.bg-indigo-500,
 .light-theme button[type="submit"],
 .light-theme button.btn-primary {
   background-color: #059669 !important;
@@ -275,6 +280,11 @@
 .light-theme button.bg-emerald-500:hover,
 .light-theme button.bg-indigo-600:hover,
 .light-theme button.bg-indigo-500:hover,
+.light-theme a.bg-sky-500:hover,
+.light-theme a.bg-emerald-600:hover,
+.light-theme a.bg-emerald-500:hover,
+.light-theme a.bg-indigo-600:hover,
+.light-theme a.bg-indigo-500:hover,
 .light-theme button[type="submit"]:hover {
   background-color: #047857 !important;
   color: #ffffff !important;
@@ -312,6 +322,11 @@
 .light-theme button.bg-emerald-500 *,
 .light-theme button.bg-indigo-600 *,
 .light-theme button.bg-indigo-500 *,
+.light-theme a.bg-sky-500 *,
+.light-theme a.bg-emerald-600 *,
+.light-theme a.bg-emerald-500 *,
+.light-theme a.bg-indigo-600 *,
+.light-theme a.bg-indigo-500 *,
 .light-theme button.bg-rose-600 *,
 .light-theme button.bg-rose-500 *,
 .light-theme button[type="submit"] *,
@@ -327,6 +342,11 @@
 .light-theme button.bg-emerald-500 svg,
 .light-theme button.bg-indigo-600 svg,
 .light-theme button.bg-indigo-500 svg,
+.light-theme a.bg-sky-500 svg,
+.light-theme a.bg-emerald-600 svg,
+.light-theme a.bg-emerald-500 svg,
+.light-theme a.bg-indigo-600 svg,
+.light-theme a.bg-indigo-500 svg,
 .light-theme button.bg-rose-600 svg,
 .light-theme button.bg-rose-500 svg,
 .light-theme button[type="submit"] svg,
@@ -338,11 +358,13 @@
   stroke: #ffffff !important;
 }
 
-/* Secondary / Cancel / Neutral buttons in Light Mode get LIGHT BG & DARK TEXT */
+/* Secondary / Cancel / Neutral buttons & links in Light Mode get LIGHT BG & DARK TEXT */
 .light-theme button.bg-slate-800,
 .light-theme button.bg-slate-900,
 .light-theme button.bg-slate-900\/60,
-.light-theme button.bg-slate-900\/80 {
+.light-theme button.bg-slate-900\/80,
+.light-theme a.bg-slate-800,
+.light-theme a.bg-slate-900 {
   background-color: #f1f5f9 !important;
   color: #0f172a !important;
   border-color: #cbd5e1 !important;
@@ -350,15 +372,29 @@
 
 .light-theme button.bg-slate-800:hover,
 .light-theme button.bg-slate-900:hover,
+.light-theme a.bg-slate-800:hover,
+.light-theme a.bg-slate-900:hover,
 .light-theme button.hover\:bg-slate-800:hover,
-.light-theme button.hover\:bg-slate-700:hover {
+.light-theme button.hover\:bg-slate-700:hover,
+.light-theme a.hover\:bg-slate-800:hover,
+.light-theme a.hover\:bg-slate-700:hover {
   background-color: #e2e8f0 !important;
   color: #0f172a !important;
 }
 
 .light-theme button.bg-slate-800 *,
-.light-theme button.bg-slate-900 * {
+.light-theme button.bg-slate-900 *,
+.light-theme a.bg-slate-800 *,
+.light-theme a.bg-slate-900 * {
   color: #0f172a !important;
+}
+
+.light-theme button.bg-slate-800 svg,
+.light-theme button.bg-slate-900 svg,
+.light-theme a.bg-slate-800 svg,
+.light-theme a.bg-slate-900 svg {
+  color: #0f172a !important;
+  stroke: #0f172a !important;
 }
 
 /* Custom Leaflet Light Theme Adjustments */
