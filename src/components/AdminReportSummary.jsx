@@ -125,7 +125,7 @@ export default function AdminReportSummary() {
     XLSX.writeFile(workbook, fileName);
   };
 
-  // DIRECT SILENT PDF DOWNLOAD FUNCTION (Tanpa Pop-up Halaman Baru)
+  // BACKEND PDF GENERATION & SILENT DOWNLOAD (Mengirim Parameter Filter ke Backend)
   const exportToPDF = async () => {
     if (filteredReports.length === 0) {
       alert('Tidak ada data laporan yang sesuai filter untuk diekspor ke PDF!');
@@ -135,69 +135,33 @@ export default function AdminReportSummary() {
     setIsExportingPDF(true);
 
     try {
-      // Off-screen element container
-      const container = document.createElement('div');
-      container.style.padding = '12px';
-      container.style.backgroundColor = '#ffffff';
-      container.style.fontFamily = "'Segoe UI', Arial, sans-serif";
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('searchQuery', searchQuery);
+      if (selectedStatus && selectedStatus !== 'Semua') params.append('status', selectedStatus);
+      if (selectedCategory && selectedCategory !== 'Semua') params.append('category', selectedCategory);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
 
-      container.innerHTML = `
-        <style>
-          * { box-sizing: border-box; }
-          table { width: 100%; border-collapse: collapse; font-size: 9.5px; color: #0f172a; font-family: Arial, sans-serif; }
-          th, td { border: 1px solid #334155; padding: 6px 8px; text-align: left; vertical-align: middle; }
-          th { background-color: #e2e8f0; color: #0f172a; font-weight: bold; text-transform: uppercase; font-size: 9px; letter-spacing: 0.3px; white-space: nowrap; }
-          tr:nth-child(even) { background-color: #f8fafc; }
-          .nowrap { white-space: nowrap; }
-          .center { text-align: center; }
-          .font-bold { font-weight: bold; }
-        </style>
-        <table>
-          <thead>
-            <tr>
-              <th class="center" style="width: 25px;">No</th>
-              <th class="nowrap" style="width: 125px;">ID Laporan</th>
-              <th class="nowrap" style="width: 75px;">Tanggal</th>
-              <th style="width: 110px;">Pelapor</th>
-              <th class="nowrap" style="width: 100px;">No HP</th>
-              <th style="width: 110px;">Kategori</th>
-              <th class="nowrap center" style="width: 65px;">Urgensi</th>
-              <th>Lokasi Jalan</th>
-              <th class="nowrap center" style="width: 80px;">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filteredReports.map((r, i) => `
-              <tr>
-                <td class="center font-bold">${i + 1}</td>
-                <td class="nowrap"><strong>${r.id}</strong></td>
-                <td class="nowrap">${new Date(r.createdAt).toLocaleDateString('id-ID')}</td>
-                <td>${r.userName || 'Masyarakat'}</td>
-                <td class="nowrap">${r.userPhone || '-'}</td>
-                <td>${r.category}</td>
-                <td class="nowrap center">${r.severity || 'Sedang'}</td>
-                <td>${r.locationName}</td>
-                <td class="nowrap center"><strong>${r.status}</strong></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
+      const pdfUrl = `http://localhost:5000/api/reports/export/pdf?${params.toString()}`;
 
-      const fileName = `Rekap_LaporJalan_${new Date().toISOString().slice(0,10)}.pdf`;
+      const response = await fetch(pdfUrl);
+      if (!response.ok) {
+        throw new Error(`Server PDF status ${response.status}`);
+      }
 
-      const options = {
-        margin: 6,
-        filename: fileName,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-      };
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `Rekap_LaporJalan_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
 
-      await html2pdf().set(options).from(container).save();
     } catch (err) {
-      console.error('Error generating PDF download:', err);
-      alert('Gagal mendownload PDF: ' + err.message);
+      console.error('Error downloading PDF from backend:', err);
+      alert('Gagal mendownload PDF dari server: ' + err.message);
     } finally {
       setIsExportingPDF(false);
     }

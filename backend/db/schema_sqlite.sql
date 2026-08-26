@@ -1,4 +1,30 @@
--- LaporJalan Database Schema for SQLite
+-- LaporJalan Master Schema & Seed for SQLite
+CREATE TABLE IF NOT EXISTS provinces (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS regencies (
+    id TEXT PRIMARY KEY,
+    province_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    FOREIGN KEY (province_id) REFERENCES provinces(id)
+);
+
+CREATE TABLE IF NOT EXISTS districts (
+    id TEXT PRIMARY KEY,
+    regency_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    FOREIGN KEY (regency_id) REFERENCES regencies(id)
+);
+
+CREATE TABLE IF NOT EXISTS villages (
+    id TEXT PRIMARY KEY,
+    district_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    FOREIGN KEY (district_id) REFERENCES districts(id)
+);
+
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     nik TEXT UNIQUE NOT NULL,
@@ -8,7 +34,10 @@ CREATE TABLE IF NOT EXISTS users (
     phone TEXT,
     avatar TEXT,
     city TEXT,
-    status TEXT NOT NULL DEFAULT 'Nonaktif',
+    province TEXT,
+    district TEXT,
+    village TEXT,
+    status TEXT NOT NULL DEFAULT 'Aktif',
     verification_token TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -52,87 +81,21 @@ CREATE TABLE IF NOT EXISTS report_timelines (
     FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
 );
 
--- SEED INITIAL ADMIN (Password: 'admin123')
+-- Seed Initial Admin
 INSERT OR IGNORE INTO admin (id, name, email, password, role)
-VALUES (
-    'ADM-001',
-    'Admin Bina Marga',
-    'admin@laporjalan.go.id',
-    '$2a$10$vN0o5Y2P6hO6U3.qC3O6uO8f9Z5U5X5Y5Z5a5b5c5d5e5f5g5h',
-    'admin'
-);
+VALUES ('ADM-001', 'Admin Bina Marga', 'admin@laporjalan.go.id', '$2a$10$vN0o5Y2P6hO6U3.qC3O6uO8f9Z5U5X5Y5Z5a5b5c5d5e5f5g5h', 'admin');
 
--- SEED INITIAL USER
-INSERT OR IGNORE INTO users (id, nik, name, email, password, phone, avatar, city, status) 
-VALUES (
-    'USR-8821', 
-    '3171021908950001', 
-    'Budi Santoso', 
-    'budi.santoso@example.com', 
-    '$2a$10$vN0o5Y2P6hO6U3.qC3O6uO8f9Z5U5X5Y5Z5a5b5c5d5e5f5g5h', 
-    '0812-3456-7890', 
-    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop', 
-    'Jakarta Selatan',
-    'Aktif'
-);
+-- Seed Initial Regions
+INSERT OR IGNORE INTO provinces (id, name) VALUES ('32', 'Jawa Barat'), ('31', 'DKI Jakarta'), ('36', 'Banten');
+INSERT OR IGNORE INTO regencies (id, province_id, name) VALUES 
+('3271', '32', 'Kota Bogor'), ('3201', '32', 'Kabupaten Bogor'), ('3276', '32', 'Kota Depok'), ('3275', '32', 'Kota Bekasi'), ('3174', '31', 'Jakarta Selatan');
 
--- SEED INITIAL REPORTS
-INSERT OR IGNORE INTO reports (id, user_id, title, category, severity, description, location_name, latitude, longitude, photo_url, status, user_name, user_phone, created_at)
-VALUES 
-(
-    'REP-2026-0812-001',
-    'USR-8821',
-    'Lubang Dalam di Lampu Merah Jl. Sudirman',
-    'Jalan Berlubang',
-    'Parah',
-    'Terdapat lubang berdiameter ~60cm dengan kedalaman 15cm persis di lajur kanan dekat perempatan lampu merah. Sangat membahayakan pengendara motor di malam hari.',
-    'Jl. Jend. Sudirman No. 42, Jakarta Pusat',
-    -6.20880000,
-    106.82190000,
-    'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=800&auto=format&fit=crop',
-    'Diproses',
-    'Budi Santoso',
-    '0812-3456-7890',
-    '2026-08-12 14:30:00'
-),
-(
-    'REP-2026-0810-002',
-    'USR-8821',
-    'Jalan Ambles Akibat Luapan Drainase',
-    'Jalan Ambles',
-    'Sedang',
-    'Aspal melesak ke bawah sepanjang 2 meter akibat erosi saluran air bawah tanah. Kendaraan roda empat terpaksa melambat.',
-    'Jl. Gatot Subroto Kav 18, Tebet',
-    -6.24150000,
-    106.84360000,
-    'https://images.unsplash.com/photo-1578575437130-527eed3abbec?q=80&w=800&auto=format&fit=crop',
-    'Selesai',
-    'Siti Rahma',
-    '0857-1122-3344',
-    '2026-08-10 08:15:00'
-),
-(
-    'REP-2026-0814-003',
-    'USR-8821',
-    'Retak Rambut Panjang & Lampu Penerangan Mati',
-    'Retak & Penerangan',
-    'Ringan',
-    'Retakan memanjang sekitar 10 meter di bahu jalan. Ditambah lagi lampu PJU di dekatnya tidak menyala.',
-    'Jl. Raya Pasar Minggu KM 15',
-    -6.27500000,
-    106.84200000,
-    'https://images.unsplash.com/photo-1621929747188-0b4dc28498d2?q=80&w=800&auto=format&fit=crop',
-    'Menunggu',
-    'Budi Santoso',
-    '0812-3456-7890',
-    '2026-08-14 10:00:00'
-);
+INSERT OR IGNORE INTO districts (id, regency_id, name) VALUES 
+('327101', '3271', 'Bogor Tengah'), ('327102', '3271', 'Bogor Barat'), ('327103', '3271', 'Bogor Timur'),
+('327104', '3271', 'Bogor Utara'), ('327105', '3271', 'Bogor Selatan'), ('327106', '3271', 'Tanah Sareal'),
+('320101', '3201', 'Cibinong'), ('320102', '3201', 'Dramaga');
 
-INSERT OR IGNORE INTO report_timelines (id, report_id, status, note, timestamp)
-VALUES
-(1, 'REP-2026-0812-001', 'Menunggu', 'Laporan berhasil diterima oleh sistem.', '2026-08-12 14:30:00'),
-(2, 'REP-2026-0812-001', 'Diproses', 'Tim Dinas Bina Marga telah melakukan verifikasi lokasi dan penjadwalan perbaikan.', '2026-08-13 09:15:00'),
-(3, 'REP-2026-0810-002', 'Menunggu', 'Laporan masuk.', '2026-08-10 08:15:00'),
-(4, 'REP-2026-0810-002', 'Diproses', 'Penambalan aspal darurat dan perbaikan drainase dijalankan.', '2026-08-10 13:00:00'),
-(5, 'REP-2026-0810-002', 'Selesai', 'Pengaspalan ulang selesai dan jalan sudah aman dilalui.', '2026-08-11 16:45:00'),
-(6, 'REP-2026-0814-003', 'Menunggu', 'Laporan baru dikirim, menunggu tinjauan verifikator.', '2026-08-14 10:00:00');
+INSERT OR IGNORE INTO villages (id, district_id, name) VALUES 
+('32710101', '327101', 'Paledang'), ('32710102', '327101', 'Babakan'), ('32710103', '327101', 'Cibogor'),
+('32710104', '327101', 'Sempur'), ('32710105', '327101', 'Tegallega'), ('32710106', '327101', 'Panaragan'),
+('32710107', '327101', 'Kebon Kelapa'), ('32710201', '327102', 'Menteng'), ('32710202', '327102', 'Bubulak');

@@ -4,22 +4,45 @@ import { useAuth } from '../context/AuthContext';
 import ReportDetailModal from './ReportDetailModal';
 import { 
   History, Search, Filter, PlusCircle, CheckCircle2, 
-  Clock, XCircle, AlertCircle, Eye, User, Globe, ChevronDown, Shield 
+  Clock, XCircle, AlertCircle, Eye, User, Globe, ChevronDown, Shield,
+  LayoutGrid, List, ExternalLink, Maximize2, Image as ImageIcon, X,
+  Calendar, RotateCcw, RefreshCw
 } from 'lucide-react';
 
 export default function HistoryList({ onAddNewReport }) {
-  const { reports } = useReports();
+  const { reports, fetchReports, isLoading, showToast } = useReports();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
   const [activeReport, setActiveReport] = useState(null);
+  const [previewPhotoReport, setPreviewPhotoReport] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Semua');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [scopeFilter, setScopeFilter] = useState('mine'); // 'mine' | 'all'
+  const [viewMode, setViewMode] = useState('card'); // 'card' | 'list'
   const [visibleCount, setVisibleCount] = useState(30);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Filter reports based on searchQuery, selectedStatus, selectedCategory, and scopeFilter
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      if (fetchReports) {
+        await fetchReports();
+      }
+      if (showToast) {
+        showToast('Data laporan berhasil diperbarui!', 'success');
+      }
+    } catch (err) {
+      console.warn("Refresh notice:", err.message);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
+
+  // Filter reports based on searchQuery, selectedStatus, selectedCategory, date range, and scopeFilter
   const filteredReports = reports.filter((rep) => {
     // 1. Scope Filter (Only for regular users)
     if (!isAdmin && scopeFilter === 'mine') {
@@ -47,6 +70,21 @@ export default function HistoryList({ onAddNewReport }) {
         rep.id.toLowerCase().includes(q) ||
         (rep.userName && rep.userName.toLowerCase().includes(q));
       if (!matches) return false;
+    }
+
+    // 5. Date Range Filter
+    if (rep.createdAt) {
+      const repDate = new Date(rep.createdAt);
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        if (repDate < start) return false;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        if (repDate > end) return false;
+      }
     }
 
     return true;
@@ -174,10 +212,10 @@ export default function HistoryList({ onAddNewReport }) {
       </div>
 
       {/* Search & Filter Toolbar */}
-      <div className="glass-card p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="glass-card p-4 rounded-xl border border-slate-800 flex flex-col xl:flex-row items-center justify-between gap-4">
         
         {/* Search Input */}
-        <div className="relative w-full sm:w-80">
+        <div className="relative w-full xl:w-72">
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
@@ -188,15 +226,45 @@ export default function HistoryList({ onAddNewReport }) {
           />
         </div>
 
-        {/* Filter Selects */}
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        {/* Filter Selects & Date Range & View Mode Toggle */}
+        <div className="flex flex-wrap lg:flex-nowrap items-center justify-between lg:justify-end gap-3 w-full xl:w-auto">
+          
+          {/* Date Range Inputs */}
+          <div className="flex items-center gap-1.5 bg-slate-900/60 p-1.5 rounded-xl border border-slate-800/80 w-full sm:w-auto">
+            <Calendar className="w-4 h-4 text-sky-400 ml-1 flex-shrink-0" />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => { setStartDate(e.target.value); setVisibleCount(30); }}
+              className="px-2 py-1 rounded-lg glass-input text-xs w-full sm:w-32"
+              title="Tanggal Mulai Pelaporan"
+            />
+            <span className="text-slate-500 text-xs font-bold">-</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => { setEndDate(e.target.value); setVisibleCount(30); }}
+              className="px-2 py-1 rounded-lg glass-input text-xs w-full sm:w-32"
+              title="Tanggal Akhir Pelaporan"
+            />
+            {(startDate || endDate) && (
+              <button
+                onClick={() => { setStartDate(''); setEndDate(''); setVisibleCount(30); }}
+                className="p-1.5 rounded-lg bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 text-xs font-bold transition-all flex-shrink-0"
+                title="Reset Filter Tanggal"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
           {/* Status Filter */}
-          <div className="flex items-center gap-1.5 w-1/2 sm:w-auto">
+          <div className="flex items-center gap-1.5 flex-1 sm:flex-initial">
             <Filter className="w-4 h-4 text-slate-500 hidden sm:block" />
             <select
               value={selectedStatus}
               onChange={(e) => { setSelectedStatus(e.target.value); setVisibleCount(30); }}
-              className="w-full sm:w-40 px-3 py-2 rounded-xl glass-input text-xs"
+              className="w-full sm:w-36 px-3 py-2 rounded-xl glass-input text-xs"
             >
               <option value="Semua">Semua Status</option>
               <option value="Menunggu">Menunggu</option>
@@ -207,11 +275,11 @@ export default function HistoryList({ onAddNewReport }) {
           </div>
 
           {/* Category Filter */}
-          <div className="w-1/2 sm:w-auto">
+          <div className="flex-1 sm:flex-initial">
             <select
               value={selectedCategory}
               onChange={(e) => { setSelectedCategory(e.target.value); setVisibleCount(30); }}
-              className="w-full sm:w-44 px-3 py-2 rounded-xl glass-input text-xs"
+              className="w-full sm:w-40 px-3 py-2 rounded-xl glass-input text-xs"
             >
               <option value="Semua">Semua Kategori</option>
               <option value="Jalan Berlubang">Jalan Berlubang</option>
@@ -220,22 +288,69 @@ export default function HistoryList({ onAddNewReport }) {
               <option value="Lainnya">Lainnya</option>
             </select>
           </div>
+
+          {/* View Mode Toggle: Card vs List & Refresh Button */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Card vs List Mode Switcher */}
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/90 border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setViewMode('card')}
+                title="Tampilan Mode Grid Card"
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  viewMode === 'card'
+                    ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span className="hidden sm:inline">Card</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                title="Tampilan Mode List Tabel"
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  viewMode === 'list'
+                    ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <List className="w-4 h-4" />
+                <span className="hidden sm:inline">List</span>
+              </button>
+            </div>
+
+            {/* Refresh Data Button */}
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing || isLoading}
+              title="Refresh Data Laporan"
+              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-all flex items-center gap-1.5 text-xs font-bold active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 text-emerald-400 ${isRefreshing || isLoading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+          </div>
         </div>
 
       </div>
 
-      {/* Reports Card Grid */}
+      {/* Reports Display (Card Grid vs Table List) */}
       {filteredReports.length === 0 ? (
         <div className="glass-card p-12 text-center rounded-2xl border border-slate-800 space-y-3">
           <History className="w-12 h-12 text-slate-600 mx-auto" />
           <h3 className="text-base font-bold text-slate-300">Belum Ada Data Laporan</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            {searchQuery || selectedStatus !== 'Semua' || selectedCategory !== 'Semua'
+            {searchQuery || selectedStatus !== 'Semua' || selectedCategory !== 'Semua' || startDate || endDate
               ? 'Tidak ada laporan yang sesuai dengan filter pencarian Anda. Coba reset filter.'
               : 'Belum ada laporan kerusakan jalan yang tercatat.'}
           </p>
         </div>
-      ) : (
+      ) : viewMode === 'card' ? (
+        /* CARD GRID VIEW */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {displayedReports.map((report) => (
             <div 
@@ -245,7 +360,7 @@ export default function HistoryList({ onAddNewReport }) {
               {/* Image Banner */}
               <div className="relative h-44 w-full bg-slate-900 overflow-hidden group">
                 <img 
-                  src={report.image || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=600&auto=format&fit=crop'} 
+                  src={report.photoUrl || report.image || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=600&auto=format&fit=crop'} 
                   alt={report.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
@@ -296,6 +411,99 @@ export default function HistoryList({ onAddNewReport }) {
             </div>
           ))}
         </div>
+      ) : (
+        /* TABLE LIST VIEW */
+        <div className="glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-900/90 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <th className="py-3.5 px-4">No. / ID Laporan</th>
+                  <th className="py-3.5 px-4">Foto Lampiran</th>
+                  <th className="py-3.5 px-4">Judul & Lokasi Kerusakan</th>
+                  <th className="py-3.5 px-4">Kategori</th>
+                  <th className="py-3.5 px-4">Pelapor</th>
+                  <th className="py-3.5 px-4">Tanggal Pelaporan</th>
+                  <th className="py-3.5 px-4">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-xs">
+                {displayedReports.map((report) => (
+                  <tr 
+                    key={report.id}
+                    className="hover:bg-slate-800/40 transition-colors group"
+                  >
+                    {/* ID Laporan with Link to Detail Modal */}
+                    <td className="py-3.5 px-4 font-mono font-bold whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => setActiveReport(report)}
+                        className="text-sky-400 hover:text-sky-300 font-bold hover:underline flex items-center gap-1.5 transition-colors group-hover:scale-105 transform origin-left"
+                        title="Klik nomor laporan ini untuk melihat detail lengkap"
+                      >
+                        <span>{report.id}</span>
+                        <ExternalLink className="w-3 h-3 opacity-70 group-hover:opacity-100" />
+                      </button>
+                    </td>
+
+                    {/* Foto Bukti - Klik langsung membuka lightbox detail lampiran foto saja */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <div 
+                        onClick={() => setPreviewPhotoReport(report)}
+                        className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800 overflow-hidden cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all flex-shrink-0 relative group/img shadow-sm"
+                        title="Klik untuk melihat detail lampiran foto ukuran penuh"
+                      >
+                        <img
+                          src={report.photoUrl || report.image || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?q=80&w=600&auto=format&fit=crop'}
+                          alt={report.title}
+                          className="w-full h-full object-cover group-hover/img:scale-110 transition-transform"
+                        />
+                        <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity">
+                          <Maximize2 className="w-4 h-4 text-white" />
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Judul & Lokasi */}
+                    <td className="py-3.5 px-4 max-w-xs">
+                      <button
+                        type="button"
+                        onClick={() => setActiveReport(report)}
+                        className="text-left font-bold text-slate-100 hover:text-sky-400 transition-colors line-clamp-1 block"
+                      >
+                        {report.title}
+                      </button>
+                      <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
+                        {report.locationName}
+                      </p>
+                    </td>
+
+                    {/* Kategori */}
+                    <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-100 dark:text-slate-100">
+                      {report.category}
+                    </td>
+
+                    {/* Pelapor */}
+                    <td className="py-3.5 px-4 whitespace-nowrap text-slate-300 font-semibold">
+                      {report.userName || 'Masyarakat'}
+                    </td>
+
+                    {/* Tanggal */}
+                    <td className="py-3.5 px-4 whitespace-nowrap text-[11px] text-slate-400">
+                      <div>{new Date(report.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                      <div className="text-slate-500">{new Date(report.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</div>
+                    </td>
+
+                    {/* Status Badge */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      {getStatusBadge(report.status)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* Pagination Load More Button */}
@@ -311,12 +519,57 @@ export default function HistoryList({ onAddNewReport }) {
         </div>
       )}
 
-      {/* Detail Modal */}
+      {/* Full Report Detail Modal */}
       {activeReport && (
         <ReportDetailModal 
           report={activeReport} 
           onClose={() => setActiveReport(null)} 
         />
+      )}
+
+      {/* Standalone Attachment Lightbox Modal (Full screen backdrop inset-0 z-40 behind Navbar z-50 with pt-20 spacing) */}
+      {previewPhotoReport && (
+        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center p-3 sm:p-6 pt-20 bg-slate-950/95 backdrop-blur-xl animate-fade-in">
+          <div className="relative max-w-5xl w-full max-h-[calc(100vh-6rem)] flex flex-col items-center justify-center my-auto">
+            
+            {/* Top Toolbar */}
+            <div className="w-full flex items-center justify-between mb-3 px-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                <ImageIcon className="w-4 h-4 text-emerald-600 dark:text-sky-400" />
+                <span>Lampiran Foto Ukuran Asli - {previewPhotoReport.id}</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <a
+                  href={previewPhotoReport.photoUrl || previewPhotoReport.image}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 border border-emerald-500/40 shadow-md transition-all active:scale-95 flex-shrink-0"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-white" /> Buka Tab Baru
+                </a>
+
+                <button
+                  onClick={() => setPreviewPhotoReport(null)}
+                  className="p-2.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-all shadow-lg flex items-center justify-center flex-shrink-0"
+                  title="Tutup Preview Foto"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Image Viewer Container */}
+            <div className="rounded-2xl overflow-hidden border border-slate-800/80 bg-slate-900/90 shadow-2xl flex items-center justify-center p-2 max-h-[72vh] w-full">
+              <img
+                src={previewPhotoReport.photoUrl || previewPhotoReport.image}
+                alt={previewPhotoReport.title}
+                className="max-h-[68vh] max-w-full w-auto h-auto object-contain rounded-xl shadow-lg"
+              />
+            </div>
+
+          </div>
+        </div>
       )}
 
     </div>

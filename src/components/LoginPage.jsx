@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { MapPin, ArrowRight, CheckCircle2, Sparkles, AlertTriangle, Camera } from 'lucide-react';
+import Logo from './Logo';
 
 export default function LoginPage({ onSwitchToRegister }) {
   const { login } = useAuth();
@@ -41,14 +42,7 @@ export default function LoginPage({ onSwitchToRegister }) {
             Aplikasi Resmi Pelaporan Masyarakat
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/30">
-              <MapPin className="w-7 h-7 text-white" />
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-              Lapor<span className="text-sky-400">Jalan</span>
-            </h1>
-          </div>
+          <Logo size="lg" />
 
           <p className="text-slate-300 text-base sm:text-lg leading-relaxed">
             Laporkan jalan rusak, berlubang, atau ambles di sekitar Anda secara langsung. Dilengkapi titik lokasi GPS presisi, foto bukti, dan pelacakan status penanganan real-time oleh Dinas Terkait.

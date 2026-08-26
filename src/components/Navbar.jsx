@@ -7,6 +7,8 @@ import {
   Users, Shield, User, ChevronDown, Settings, FileSpreadsheet 
 } from 'lucide-react';
 
+import Logo from './Logo';
+
 export default function Navbar({ activeTab, setActiveTab }) {
   const { user, logout } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -33,30 +35,8 @@ export default function Navbar({ activeTab, setActiveTab }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           
           {/* Logo & Brand */}
-          <div 
-            onClick={() => setActiveTab('history')} 
-            className="flex items-center gap-3 cursor-pointer group"
-          >
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform ${
-              isAdmin ? 'bg-gradient-to-tr from-indigo-600 to-purple-600 shadow-indigo-500/20' : 'bg-gradient-to-tr from-sky-500 to-indigo-600 shadow-sky-500/20'
-            }`}>
-              {isAdmin ? <Shield className="w-5 h-5 text-white" /> : <MapPin className="w-5 h-5 text-white" />}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-black text-white tracking-tight">
-                  Lapor<span className="text-sky-400">Jalan</span>
-                </span>
-                {isAdmin && (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
-                    ADMIN
-                  </span>
-                )}
-              </div>
-              <span className="block text-[10px] text-slate-400 font-medium tracking-wide uppercase">
-                {isAdmin ? 'Sistem Informasi Bina Marga' : 'Portal Pelaporan Warga'}
-              </span>
-            </div>
+          <div onClick={() => setActiveTab('history')}>
+            <Logo size="md" isAdmin={isAdmin} />
           </div>
 
           {/* Navigation Links */}

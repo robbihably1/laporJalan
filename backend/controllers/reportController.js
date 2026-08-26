@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const PDFDocument = require('pdfkit-table');
 
 // Sample mock data for fallback
 let MOCK_REPORTS = [
@@ -449,6 +450,146 @@ exports.updateReportDetails = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+  }
+};
+
+// 7. Export PDF Reports Controller Endpoint
+exports.exportPDFReports = async (req, res) => {
+  try {
+    const { status, category, searchQuery, search, startDate, endDate } = req.query;
+    const searchTerm = searchQuery || search;
+
+    let rows = [];
+
+    try {
+      let query = 'SELECT * FROM reports';
+      const params = [];
+      const conditions = [];
+
+      if (status && status !== 'Semua') {
+        conditions.push('status = ?');
+        params.push(status);
+      }
+
+      if (category && category !== 'Semua') {
+        conditions.push('category = ?');
+        params.push(category);
+      }
+
+      if (searchTerm) {
+        conditions.push('(title LIKE ? OR location_name LIKE ? OR category LIKE ? OR id LIKE ? OR user_name LIKE ?)');
+        const term = `%${searchTerm}%`;
+        params.push(term, term, term, term, term);
+      }
+
+      if (startDate) {
+        conditions.push('created_at >= ?');
+        params.push(`${startDate} 00:00:00`);
+      }
+
+      if (endDate) {
+        conditions.push('created_at <= ?');
+        params.push(`${endDate} 23:59:59`);
+      }
+
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+
+      query += ' ORDER BY created_at DESC';
+
+      const [queryResult] = await pool.query(query, params);
+      rows = queryResult || [];
+    } catch (dbErr) {
+      console.warn("DB PDF Query Fallback:", dbErr.message);
+      rows = [...MOCK_REPORTS];
+    }
+
+    // Export all matching rows without slicing limit
+    const exportList = rows;
+
+    // Initialize PDFDocument in A4 Landscape mode (Forcing pure White Auto Light Mode)
+    const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
+
+    const fileName = `Rekap_LaporJalan_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    doc.pipe(res);
+
+    // Clean Document Header Title (Plain Text on White Page Background)
+    doc
+      .fontSize(16)
+      .fillColor('#047857')
+      .font('Helvetica-Bold')
+      .text('REKAPITULASI LAPORAN PENGADUAN JALAN RUSAK', 30, 28);
+
+    doc
+      .fontSize(9)
+      .fillColor('#475569')
+      .font('Helvetica')
+      .text(`Dinas Bina Marga - Tanggal Ekspor: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} | Total Data: ${exportList.length} Laporan`, 30, 48);
+
+    // Draw thin emerald divider line below title
+    doc
+      .moveTo(30, 62)
+      .lineTo(812, 62)
+      .lineWidth(1.5)
+      .strokeColor('#047857')
+      .stroke();
+
+    // Position Y after title header
+    doc.y = 75;
+
+    // Define PDF Table Structure with Dark Emerald Background & Pure White Text
+    const table = {
+      title: "",
+      headers: [
+        { label: "No", property: "no", width: 28, align: "center", headerColor: "#047857", headerOpacity: 1 },
+        { label: "ID Laporan", property: "id", width: 115, align: "left", headerColor: "#047857", headerOpacity: 1 },
+        { label: "Tanggal", property: "date", width: 70, align: "left", headerColor: "#047857", headerOpacity: 1 },
+        { label: "Pelapor", property: "user", width: 95, align: "left", headerColor: "#047857", headerOpacity: 1 },
+        { label: "No HP", property: "phone", width: 85, align: "left", headerColor: "#047857", headerOpacity: 1 },
+        { label: "Kategori", property: "category", width: 100, align: "left", headerColor: "#047857", headerOpacity: 1 },
+        { label: "Urgensi", property: "severity", width: 55, align: "center", headerColor: "#047857", headerOpacity: 1 },
+        { label: "Lokasi Jalan", property: "location", width: 160, align: "left", headerColor: "#047857", headerOpacity: 1 },
+        { label: "Status", property: "status", width: 65, align: "center", headerColor: "#047857", headerOpacity: 1 }
+      ],
+      datas: exportList.map((r, i) => ({
+        no: String(i + 1),
+        id: String(r.id || ''),
+        date: r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID') : new Date(r.createdAt || Date.now()).toLocaleDateString('id-ID'),
+        user: String(r.user_name || r.userName || 'Masyarakat'),
+        phone: String(r.user_phone || r.userPhone || '-'),
+        category: String(r.category || '-'),
+        severity: String(r.severity || 'Sedang'),
+        location: String(r.location_name || r.locationName || '-'),
+        status: String(r.status || 'Menunggu')
+      }))
+    };
+
+    // Render Table using pdfkit-table in AUTO LIGHT MODE
+    await doc.table(table, {
+      prepareHeader: () => doc.font("Helvetica-Bold").fontSize(8.5).fillColor("#ffffff"),
+      prepareRow: (row, indexColumn, indexRow, rect, rowOptions) => {
+        doc.font("Helvetica").fontSize(8).fillColor("#0f172a");
+      },
+      headerColor: "#047857",
+      headerOpacity: 1,
+      padding: 5,
+      divider: {
+        header: { disabled: false, width: 1, opacity: 1, color: '#047857' },
+        horizontal: { disabled: false, width: 0.5, opacity: 0.5, color: '#cbd5e1' }
+      }
+    });
+
+    doc.end();
+  } catch (err) {
+    console.error("PDF generation error:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: 'Gagal membuat PDF: ' + err.message });
+    }
   }
 };
 

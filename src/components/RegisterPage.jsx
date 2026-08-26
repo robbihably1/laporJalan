@@ -6,6 +6,8 @@ import {
   UserCheck, Sparkles, UserPlus, FileText, Lock, Mail, Phone, Building2 
 } from 'lucide-react';
 
+import Logo from './Logo';
+
 export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted }) {
   const { register } = useAuth();
   
@@ -126,14 +128,7 @@ export default function RegisterPage({ onSwitchToLogin, onRegistrationSubmitted 
             Pendaftaran Akun Warga Terverifikasi
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/30">
-              <MapPin className="w-7 h-7 text-white" />
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-              Lapor<span className="text-sky-400">Jalan</span>
-            </h1>
-          </div>
+          <Logo size="lg" />
 
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
             Daftarkan akun warga Anda untuk menyampaikan laporan jalan rusak secara resmi, mengunggah bukti foto presisi, dan memantau status penanganan secara real-time.

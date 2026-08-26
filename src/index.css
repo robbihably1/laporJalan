@@ -34,6 +34,34 @@
 }
 
 /* =========================================================
+   LOGO BRAND STYLING (DARK MODE & LIGHT MODE ADAPTIVE)
+   ========================================================= */
+
+.brand-logo-title {
+  color: #f8fafc !important;
+}
+
+.brand-logo-emerald {
+  color: #10b981 !important;
+}
+
+.brand-sub-text {
+  color: #94a3b8 !important;
+}
+
+.light-theme .brand-logo-title {
+  color: #0f172a !important;
+}
+
+.light-theme .brand-logo-emerald {
+  color: #047857 !important;
+}
+
+.light-theme .brand-sub-text {
+  color: #475569 !important;
+}
+
+/* =========================================================
    LIGHT THEME OVERRIDES (Putih dengan aksen hijau khas Bogor)
    ========================================================= */
 .light-theme body,
@@ -356,6 +384,21 @@
 .light-theme svg.text-white {
   color: #ffffff !important;
   stroke: #ffffff !important;
+}
+
+/* Category Badge in Light Mode -> Solid Dark Emerald Background + Pure White Text */
+.light-theme .category-badge,
+.light-theme span.category-badge,
+.light-theme span.bg-slate-800\/80 {
+  background-color: #047857 !important;
+  color: #ffffff !important;
+  border-color: #059669 !important;
+}
+
+.light-theme .category-badge *,
+.light-theme span.category-badge *,
+.light-theme span.bg-slate-800\/80 * {
+  color: #ffffff !important;
 }
 
 /* Secondary / Cancel / Neutral buttons & links in Light Mode get LIGHT BG & DARK TEXT */
