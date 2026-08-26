@@ -2,32 +2,52 @@ const path = require('path');
 const fs = require('fs');
 const mysql = require('mysql2/promise');
 
-// Check if running on Vercel Serverless Environment
+// Check if running on Vercel Serverless Environment or Production
 const isVercel = !!process.env.VERCEL;
 
-// On Vercel Serverless, use writable /tmp directory
+const sourceDbPath = path.join(__dirname, '../db/lapor_jalan.sqlite');
+
+// On Vercel Serverless, use writable /tmp directory; otherwise use local db file path
 const dbPath = isVercel 
   ? path.join('/tmp', 'lapor_jalan.sqlite') 
-  : path.join(__dirname, '../db/lapor_jalan.sqlite');
+  : sourceDbPath;
 
 const schemaPath = path.join(__dirname, '../db/schema_sqlite.sql');
 
-// Ensure db directory exists
+// Ensure db directory exists & copy source SQLite file if running in Serverless (/tmp)
 try {
   const dbDir = path.dirname(dbPath);
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
   }
+
+  // Copy pre-populated lapor_jalan.sqlite file to writable /tmp directory if needed
+  if (isVercel && fs.existsSync(sourceDbPath) && dbPath !== sourceDbPath) {
+    if (!fs.existsSync(dbPath) || fs.statSync(dbPath).size === 0) {
+      fs.copyFileSync(sourceDbPath, dbPath);
+      console.log(' Successfully copied seed lapor_jalan.sqlite database to:', dbPath);
+    }
+  }
 } catch (err) {
-  console.warn("Notice on mkdir for DB:", err.message);
+  console.warn("Notice on DB file/directory setup:", err.message);
 }
 
 let mysqlPool = null;
 let dbInstance = null;
 let isSqliteReady = false;
 
-// Default hashed password for memory fallback ('123456')
+// Default hashed password for fallback ('123456')
 const DEFAULT_HASHED_PASS = '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW';
+
+let MEMORY_ADMINS = [
+  {
+    id: "ADM-001",
+    name: "Administrator Bina Marga",
+    email: "admin@laporjalan.go.id",
+    password: DEFAULT_HASHED_PASS,
+    role: "admin"
+  }
+];
 
 // In-Memory Data Store fallback when running on Vercel Serverless without C++ native SQLite binary
 let MEMORY_USERS = [
@@ -47,19 +67,19 @@ let MEMORY_USERS = [
     role: "user"
   },
   {
-    id: "USR-ADMIN",
-    nik: "3171012304950000",
-    name: "Administrator Bina Marga",
-    email: "admin@laporjalan.go.id",
+    id: "USR-1001",
+    nik: "3271010000012345",
+    name: "Budi Subagja",
+    email: "budi.subagja1@example.com",
     password: DEFAULT_HASHED_PASS,
-    phone: "081122334455",
-    avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=200&auto=format&fit=crop",
+    phone: "0812-1007-5003",
+    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop",
     province: "Jawa Barat",
     city: "Kota Bogor",
-    district: "Bogor Selatan",
-    village: "Batutulis",
+    district: "Bogor Tengah",
+    village: "Paledang",
     status: "Aktif",
-    role: "admin"
+    role: "user"
   }
 ];
 
@@ -140,6 +160,7 @@ if (process.env.DB_HOST) {
 if (!mysqlPool) {
   try {
     const Database = require('better-sqlite3');
+    const dbFileExists = fs.existsSync(dbPath) && fs.statSync(dbPath).size > 0;
     dbInstance = new Database(dbPath, { timeout: 5000 });
 
     try {
@@ -148,7 +169,7 @@ if (!mysqlPool) {
       console.warn("WAL pragma notice:", walErr.message);
     }
 
-    if (fs.existsSync(schemaPath)) {
+    if (!dbFileExists && fs.existsSync(schemaPath)) {
       const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
       dbInstance.exec(schemaSql);
     }
@@ -159,7 +180,8 @@ if (!mysqlPool) {
     try {
       const sqlite3 = require('sqlite3').verbose();
       const db = new sqlite3.Database(dbPath);
-      if (fs.existsSync(schemaPath)) {
+      const dbFileExists = fs.existsSync(dbPath) && fs.statSync(dbPath).size > 0;
+      if (!dbFileExists && fs.existsSync(schemaPath)) {
         const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
         db.exec(schemaSql);
       }
@@ -203,6 +225,20 @@ async function query(sql, params = []) {
 
   // Safe Memory Data Engine Fallback for Vercel Serverless
   const sqlUpper = sql.trim().toUpperCase();
+
+  if (sqlUpper.includes("FROM ADMIN")) {
+    if (sqlUpper.includes("WHERE EMAIL = ?")) {
+      const email = params[0];
+      const match = MEMORY_ADMINS.filter(a => a.email === email);
+      return [match];
+    }
+    if (sqlUpper.includes("WHERE ID = ?")) {
+      const id = params[0];
+      const match = MEMORY_ADMINS.filter(a => a.id === id || a.email === params[1]);
+      return [match];
+    }
+    return [MEMORY_ADMINS];
+  }
 
   if (sqlUpper.includes("FROM USERS")) {
     if (sqlUpper.includes("WHERE EMAIL = ? OR (NIK = ?")) {
