@@ -30,7 +30,7 @@ exports.updateUserStatus = async (req, res) => {
     }
 
     try {
-      await pool.query('UPDATE users SET status = ? WHERE id = ?', [status, id]);
+      await pool.query('UPDATE users SET status = ?, verification_token = NULL WHERE id = ? OR email = ?', [status, id, id]);
       return res.json({
         success: true,
         message: `Status user #${id} berhasil diubah menjadi ${status}`
