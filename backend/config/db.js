@@ -1,6 +1,10 @@
 const path = require('path');
 const fs = require('fs');
 const mysql = require('mysql2/promise');
+const dotenv = require('dotenv');
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
+dotenv.config();
 
 // Check if running on Vercel Serverless Environment or Production
 const isVercel = !!process.env.VERCEL;
@@ -138,24 +142,198 @@ let MEMORY_TIMELINES = [
   { report_id: "REP-2026-0812-001", status: "Diproses", note: "Tim verifikasi Dinas Bina Marga telah meninjau lokasi.", timestamp: "2026-08-13 10:00:00" }
 ];
 
-// 1. Try Cloud MySQL Pool if credentials are provided
-if (process.env.DB_HOST) {
+// 1. Try Cloud MySQL Pool (Supports Railway, Aiven, PlanetScale, TiDB, etc.)
+const host = process.env.DB_HOST || process.env.MYSQLHOST || process.env.RAILWAY_TCP_PROXY_DOMAIN;
+const user = process.env.DB_USER || process.env.MYSQLUSER || 'root';
+const password = process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || process.env.MYSQL_ROOT_PASSWORD;
+const database = process.env.DB_NAME || process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE || 'railway';
+const port = parseInt(process.env.DB_PORT || process.env.MYSQLPORT || process.env.RAILWAY_TCP_PROXY_PORT || '3306');
+
+if (process.env.MYSQL_URL || (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('mysql'))) {
   try {
+    const rawUrl = process.env.MYSQL_URL || process.env.DATABASE_URL;
+    const dbUrl = new URL(rawUrl);
     mysqlPool = mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      port: process.env.DB_PORT || 3306,
+      host: dbUrl.hostname,
+      user: dbUrl.username || 'root',
+      password: dbUrl.password,
+      database: dbUrl.pathname.replace('/', '') || 'railway',
+      port: parseInt(dbUrl.port || '3306'),
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
+      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false }
     });
-    console.log(` Connected to Cloud MySQL Database (${process.env.DB_HOST})`);
+    console.log(` Connected to Cloud MySQL Database via URL (${dbUrl.hostname})`);
+  } catch (err) {
+    console.warn(" Cloud Database URL parse error:", err.message);
+  }
+} else if (host) {
+  try {
+    mysqlPool = mysql.createPool({
+      host,
+      user,
+      password,
+      database,
+      port,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false }
+    });
+    console.log(` Connected to Cloud MySQL Database (${host}:${port})`);
   } catch (err) {
     console.warn(" Cloud MySQL Connection Warning:", err.message);
   }
+}
+
+// Auto-initialize Cloud MySQL tables if pool is created
+if (mysqlPool) {
+  (async () => {
+    try {
+      await mysqlPool.query(`
+        CREATE TABLE IF NOT EXISTS admin (
+          id VARCHAR(50) PRIMARY KEY,
+          name VARCHAR(100) NOT NULL,
+          email VARCHAR(100) UNIQUE NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await mysqlPool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id VARCHAR(50) PRIMARY KEY,
+          nik VARCHAR(20),
+          name VARCHAR(100) NOT NULL,
+          email VARCHAR(100) UNIQUE NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          phone VARCHAR(20),
+          avatar TEXT,
+          province VARCHAR(100),
+          city VARCHAR(100),
+          district VARCHAR(100),
+          village VARCHAR(100),
+          status VARCHAR(20) DEFAULT 'Aktif',
+          verification_token VARCHAR(255),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await mysqlPool.query(`
+        CREATE TABLE IF NOT EXISTS reports (
+          id VARCHAR(50) PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          category VARCHAR(50) NOT NULL,
+          severity VARCHAR(20) NOT NULL,
+          description TEXT NOT NULL,
+          location_name VARCHAR(255) NOT NULL,
+          latitude DOUBLE NOT NULL,
+          longitude DOUBLE NOT NULL,
+          photo_url TEXT,
+          status VARCHAR(20) DEFAULT 'Menunggu',
+          user_id VARCHAR(50),
+          user_name VARCHAR(100),
+          user_phone VARCHAR(20),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await mysqlPool.query(`
+        CREATE TABLE IF NOT EXISTS report_timelines (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          report_id VARCHAR(50) NOT NULL,
+          status VARCHAR(20) NOT NULL,
+          note TEXT,
+          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await mysqlPool.query(`
+        CREATE TABLE IF NOT EXISTS provinces (
+          id VARCHAR(10) PRIMARY KEY,
+          name VARCHAR(100) NOT NULL
+        );
+      `);
+      await mysqlPool.query(`
+        CREATE TABLE IF NOT EXISTS regencies (
+          id VARCHAR(10) PRIMARY KEY,
+          province_id VARCHAR(10) NOT NULL,
+          name VARCHAR(100) NOT NULL
+        );
+      `);
+      await mysqlPool.query(`
+        CREATE TABLE IF NOT EXISTS districts (
+          id VARCHAR(10) PRIMARY KEY,
+          regency_id VARCHAR(10) NOT NULL,
+          name VARCHAR(100) NOT NULL
+        );
+      `);
+      await mysqlPool.query(`
+        CREATE TABLE IF NOT EXISTS villages (
+          id VARCHAR(10) PRIMARY KEY,
+          district_id VARCHAR(10) NOT NULL,
+          name VARCHAR(100) NOT NULL
+        );
+      `);
+
+      // Seed default admin
+      await mysqlPool.query(`
+        INSERT IGNORE INTO admin (id, name, email, password) 
+        VALUES ('ADM-001', 'Administrator Bina Marga', 'robbihably10@gmail.com', '${DEFAULT_HASHED_PASS}')
+      `);
+
+      // Seed Provinces
+      await mysqlPool.query(`
+        INSERT IGNORE INTO provinces (id, name) VALUES 
+        ('32', 'Jawa Barat'), ('31', 'DKI Jakarta'), ('36', 'Banten')
+      `);
+      // Seed Regencies
+      await mysqlPool.query(`
+        INSERT IGNORE INTO regencies (id, province_id, name) VALUES 
+        ('3271', '32', 'Kota Bogor'), ('3201', '32', 'Kabupaten Bogor'), 
+        ('3276', '32', 'Kota Depok'), ('3275', '32', 'Kota Bekasi'), ('3174', '31', 'Jakarta Selatan')
+      `);
+      // Seed Districts
+      await mysqlPool.query(`
+        INSERT IGNORE INTO districts (id, regency_id, name) VALUES 
+        ('327101', '3271', 'Bogor Tengah'), ('327102', '3271', 'Bogor Barat'), ('327103', '3271', 'Bogor Timur'),
+        ('327104', '3271', 'Bogor Utara'), ('327105', '3271', 'Bogor Selatan'), ('327106', '3271', 'Tanah Sareal'),
+        ('320101', '3201', 'Cibinong'), ('320102', '3201', 'Dramaga'), ('317401', '3174', 'Tebet')
+      `);
+      // Seed Villages
+      await mysqlPool.query(`
+        INSERT IGNORE INTO villages (id, district_id, name) VALUES 
+        ('32710101', '327101', 'Paledang'), ('32710102', '327101', 'Babakan'), ('32710103', '327101', 'Cibogor'),
+        ('32710104', '327101', 'Sempur'), ('32710105', '327101', 'Tegallega'), ('32710201', '327102', 'Menteng'),
+        ('32710301', '327103', 'Baranangsiang'), ('32710401', '327104', 'Bantarjati'), ('32710501', '327105', 'Empang'),
+        ('32710601', '327106', 'Kedung Badak'), ('32010101', '320101', 'Pakansari'), ('31740101', '317401', 'Tebet Barat')
+      `);
+
+      // Auto-seed initial users & reports if Cloud MySQL tables are empty
+      try {
+        const [uCheck] = await mysqlPool.query('SELECT count(*) as c FROM users');
+        if (uCheck && uCheck[0] && uCheck[0].c === 0 && Array.isArray(MEMORY_USERS)) {
+          for (const u of MEMORY_USERS) {
+            await mysqlPool.query(
+              "INSERT IGNORE INTO users (id, nik, name, email, password, phone, avatar, province, city, district, village, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              [u.id, u.nik, u.name, u.email, u.password, u.phone || '', u.avatar || '', u.province || 'Jawa Barat', u.city || 'Kota Bogor', u.district || '', u.village || '', u.status || 'Aktif']
+            );
+          }
+        }
+
+        const [rCheck] = await mysqlPool.query('SELECT count(*) as c FROM reports');
+        if (rCheck && rCheck[0] && rCheck[0].c === 0 && Array.isArray(MEMORY_REPORTS)) {
+          for (const r of MEMORY_REPORTS) {
+            await mysqlPool.query(
+              "INSERT IGNORE INTO reports (id, title, category, severity, description, location_name, latitude, longitude, photo_url, status, user_name, user_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              [r.id, r.title, r.category, r.severity, r.description, r.location_name, r.latitude, r.longitude, r.photo_url, r.status, r.user_name || 'Ahmad Subagja', r.user_phone || '081234567890']
+            );
+          }
+        }
+      } catch (seedErr) {
+        console.warn("Notice seeding initial MySQL data:", seedErr.message);
+      }
+    } catch (e) {
+      console.warn("Cloud MySQL table init notice:", e.message);
+    }
+  })();
 }
 
 // 2. Try SQLite Driver with safe fallback
