@@ -17,7 +17,7 @@ exports.register = async (req, res) => {
     const verificationToken = 'vtoken_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
 
     // Send real activation email using nodemailer
-    const emailResult = await sendActivationEmail(email, name, verificationToken);
+    const emailResult = await sendActivationEmail(email, name, verificationToken, req);
 
     try {
       const [existing] = await pool.query("SELECT * FROM users WHERE email = ? OR (nik = ? AND nik != '')", [email, nik || '']);
@@ -47,7 +47,7 @@ exports.register = async (req, res) => {
         email,
         token: verificationToken,
         previewUrl: emailResult?.previewUrl || null,
-        activationLink: emailResult?.activationLink || `http://localhost:5173/?verify_token=${verificationToken}`,
+        activationLink: emailResult?.activationLink || `${req.protocol}://${req.get('host')}/?verify_token=${verificationToken}`,
         user: { id: userId, nik: userNik, name, email, phone, avatar: userAvatar, province: userProvince, city: userCity, district: userDistrict, village: userVillage, status: 'Nonaktif', role: 'user' }
       });
     } catch (dbErr) {
