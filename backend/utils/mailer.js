@@ -11,29 +11,33 @@ let transporter = null;
 async function initMailer() {
   if (transporter) return transporter;
 
-  // Option 1: Use Custom SMTP Server configured in backend/.env or Vercel Env Vars
-  if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-    try {
-      transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-      return transporter;
-    } catch (err) {
-      console.warn('Custom SMTP Connection Warning:', err.message);
-    }
-  }
+  const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+  const smtpUser = process.env.SMTP_USER || 'robbihably10@gmail.com';
+  const smtpPass = process.env.SMTP_PASS || 'tjrlleagrfefuqpo';
 
-  // Option 2: Fallback to JsonTransport for Serverless safety (Zero top-level network requests)
-  transporter = nodemailer.createTransport({
-    jsonTransport: true
-  });
-  return transporter;
+  try {
+    transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+    console.log(` SMTP Mailer initialized for: ${smtpUser} (${smtpHost}:${smtpPort})`);
+    return transporter;
+  } catch (err) {
+    console.warn('Custom SMTP Connection Warning, falling back to JsonTransport:', err.message);
+    transporter = nodemailer.createTransport({
+      jsonTransport: true
+    });
+    return transporter;
+  }
 }
 
 /**

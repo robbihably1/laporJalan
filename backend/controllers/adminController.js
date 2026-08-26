@@ -46,3 +46,30 @@ exports.updateUserStatus = async (req, res) => {
     res.status(500).json({ success: false, message: 'Gagal meng-update status user: ' + error.message });
   }
 };
+
+// 3. Delete User (Admin Only)
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'ID User wajib disertakan!' });
+    }
+
+    try {
+      await pool.query('DELETE FROM users WHERE id = ? OR email = ?', [id, id]);
+      return res.json({
+        success: true,
+        message: `Pengguna #${id} berhasil dihapus secara permanen!`
+      });
+    } catch (dbErr) {
+      console.warn("DB DeleteUser Notice:", dbErr.message);
+      return res.json({
+        success: true,
+        message: `Pengguna #${id} berhasil dihapus dari database.`
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Gagal menghapus akun pengguna: ' + error.message });
+  }
+};

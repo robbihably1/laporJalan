@@ -306,6 +306,12 @@ async function query(sql, params = []) {
     return [{ affectedRows: 1 }];
   }
 
+  if (sqlUpper.includes("DELETE FROM USERS")) {
+    const targetId = params[0];
+    MEMORY_USERS = MEMORY_USERS.filter(u => u.id !== targetId && u.email !== targetId);
+    return [{ affectedRows: 1 }];
+  }
+
   if (sqlUpper.includes("FROM REPORTS")) {
     let filtered = [...MEMORY_REPORTS];
     if (params.length > 0 && sqlUpper.includes("WHERE STATUS = ?")) {

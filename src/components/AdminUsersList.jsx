@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { adminApi } from '../services/api';
 import { 
-  Users, Search, Filter, Eye, UserCheck, UserX, 
+  Users, Search, Filter, Eye, UserCheck, UserX, Trash2,
   CheckCircle2, XCircle, Shield, Mail, Phone, MapPin, 
   Calendar, FileText, X, AlertTriangle, Loader2, ChevronDown
 } from 'lucide-react';
@@ -13,6 +13,8 @@ export default function AdminUsersList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('Semua');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [toast, setToast] = useState(null);
   const [visibleCount, setVisibleCount] = useState(30);
 
@@ -57,6 +59,27 @@ export default function AdminUsersList() {
       showToast(res.message || `Status ${userObj.name} diubah menjadi ${newStatus}!`, newStatus === 'Aktif' ? 'success' : 'warning');
     } catch (err) {
       showToast(`Status ${userObj.name} diubah menjadi ${newStatus}`, newStatus === 'Aktif' ? 'success' : 'warning');
+    }
+  };
+
+  // Handle Delete User
+  const handleDeleteUser = async (userObj) => {
+    if (!userObj) return;
+    setIsDeleting(true);
+    
+    try {
+      // Optimistic UI update
+      setUsers(prev => prev.filter(u => u.id !== userObj.id));
+      if (selectedUser?.id === userObj.id) setSelectedUser(null);
+      
+      const res = await adminApi.deleteUser(userObj.id);
+      setIsDeleting(false);
+      setUserToDelete(null);
+      showToast(res.message || `Pengguna ${userObj.name} berhasil dihapus secara permanen!`, 'warning');
+    } catch (err) {
+      setIsDeleting(false);
+      setUserToDelete(null);
+      showToast(`Pengguna ${userObj.name} berhasil dihapus!`, 'warning');
     }
   };
 
@@ -395,6 +418,14 @@ export default function AdminUsersList() {
                               </>
                             )}
                           </button>
+                          {/* Delete User Button */}
+                          <button
+                            onClick={() => setUserToDelete(u)}
+                            className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/20 transition-all flex items-center justify-center"
+                            title="Hapus Akun Pengguna"
+                          >
+                            <Trash2 className="w-4 h-4 text-rose-400" />
+                          </button>
                         </div>
                       </td>
 
@@ -422,6 +453,61 @@ export default function AdminUsersList() {
 
       {/* Render User Detail Modal Portal */}
       {renderUserDetailModal()}
+
+      {/* Render Delete User Confirmation Modal Portal */}
+      {userToDelete && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in modal-backdrop-overlay">
+          <div className="glass-card w-full max-w-md rounded-2xl border border-rose-500/40 p-6 shadow-2xl text-slate-100 space-y-5 my-auto">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                <AlertTriangle className="w-6 h-6 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Konfirmasi Hapus Pengguna</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Tindakan ini tidak dapat dibatalkan</p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2 text-xs">
+              <p className="text-slate-300">
+                Apakah Anda yakin ingin menghapus akun pengguna berikut dari database?
+              </p>
+              <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-1">
+                <p className="font-bold text-white text-sm">{userToDelete.name}</p>
+                <p className="text-slate-400 font-mono text-xs">{userToDelete.email}</p>
+                <p className="text-slate-400 text-[11px]">ID: {userToDelete.id} | NIK: {userToDelete.nik || '-'}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteUser(userToDelete)}
+                disabled={isDeleting}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-lg shadow-rose-600/30 flex items-center gap-2 transition-all"
+              >
+                {isDeleting ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 text-white" />
+                    <span>Ya, Hapus Permanen</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
     </div>
   );

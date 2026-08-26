@@ -168,6 +168,12 @@ export const adminApi = {
       body: JSON.stringify({ status }),
     });
   },
+
+  deleteUser: async (id) => {
+    return fetchApi(`/admin/users/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // ----------------------------------------------------
