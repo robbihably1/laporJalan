@@ -62,7 +62,7 @@ exports.register = async (req, res) => {
 // 2. Email Verification & Account Activation Endpoint
 exports.verifyEmail = async (req, res) => {
   try {
-    const token = req.query.token || req.body.token;
+    const token = req.query.token || req.query.verify_token || req.body.token || req.body.verify_token;
 
     if (!token) {
       return res.status(400).json({ success: false, message: 'Token verifikasi tidak ditemukan!' });
@@ -80,7 +80,7 @@ exports.verifyEmail = async (req, res) => {
           success: true,
           verified: true,
           message: 'Akun Anda berhasil diverifikasi & diaktifkan! Silakan masuk.',
-          user: { ...user, status: 'Aktif' }
+          user: { ...user, status: 'Aktif', verification_token: null }
         });
       } else {
         return res.status(404).json({ success: false, message: 'Token verifikasi tidak valid atau telah kadaluarsa!' });
@@ -97,14 +97,15 @@ exports.verifyEmail = async (req, res) => {
 // 3. Check Account Verification Status
 exports.checkVerificationStatus = async (req, res) => {
   try {
-    const { email, token } = req.query;
+    const email = req.query.email || req.body.email || '';
+    const token = req.query.token || req.query.verify_token || req.body.token || req.body.verify_token || '';
 
     if (!email && !token) {
       return res.status(400).json({ success: false, message: 'Email atau token tidak valid!' });
     }
 
     try {
-      const [rows] = await pool.query('SELECT id, status FROM users WHERE email = ? OR verification_token = ?', [email || '', token || '']);
+      const [rows] = await pool.query('SELECT id, status FROM users WHERE (email = ? AND email != "") OR verification_token = ? OR (id = ? AND id != "")', [email, token, token]);
       if (rows && rows.length > 0) {
         const isVerified = rows[0].status === 'Aktif';
         return res.json({
