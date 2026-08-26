@@ -23,26 +23,29 @@ const damageMarkerIcon = new L.Icon({
 
 export default function ReportDetailModal({ report, onClose }) {
   const { user } = useAuth();
-  const { fetchReports, showToast } = useReports();
+  const { reports, fetchReports, showToast } = useReports();
   const isAdmin = user?.role === 'admin';
+
+  // Live active report synced from global context
+  const activeReport = (reports && Array.isArray(reports) ? reports.find(r => r.id === report?.id) : null) || report;
 
   const [isFullImageOpen, setIsFullImageOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState(report?.status || 'Menunggu');
+  const [selectedStatus, setSelectedStatus] = useState(activeReport?.status || 'Menunggu');
   const [adminNote, setAdminNote] = useState('');
   const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
 
   // Check if report belongs to logged-in user or can be edited while status is 'Menunggu'
-  const isOwner = (report?.userId && user?.id && report.userId === user.id) ||
-                  (report?.userName && user?.name && report.userName.toLowerCase() === user.name.toLowerCase());
-  const canEdit = report?.status === 'Menunggu' && (isOwner || !isAdmin);
+  const isOwner = (activeReport?.userId && user?.id && activeReport.userId === user.id) ||
+                  (activeReport?.userName && user?.name && activeReport.userName.toLowerCase() === user.name.toLowerCase());
+  const canEdit = activeReport?.status === 'Menunggu' && (isOwner || !isAdmin);
 
   // Sync selected status when report changes
   useEffect(() => {
-    if (report) {
-      setSelectedStatus(report.status);
+    if (activeReport) {
+      setSelectedStatus(activeReport.status);
     }
-  }, [report]);
+  }, [activeReport]);
 
   // Lock background body scroll when modal is open
   useEffect(() => {
@@ -52,9 +55,9 @@ export default function ReportDetailModal({ report, onClose }) {
     };
   }, []);
 
-  if (!report) return null;
+  if (!activeReport) return null;
 
-  const isSameStatus = selectedStatus === report.status;
+  const isSameStatus = selectedStatus === activeReport.status;
 
   // Admin Status Change Handler
   const handleAdminStatusUpdate = async (e) => {
@@ -62,7 +65,7 @@ export default function ReportDetailModal({ report, onClose }) {
 
     if (isSameStatus) {
       if (showToast) {
-        showToast(`Laporan saat ini sudah berstatus '${report.status}'. Silakan pilih status baru yang berbeda!`, 'warning');
+        showToast(`Laporan saat ini sudah berstatus '${activeReport.status}'. Silakan pilih status baru yang berbeda!`, 'warning');
       }
       return;
     }
@@ -72,12 +75,13 @@ export default function ReportDetailModal({ report, onClose }) {
     const noteToSave = adminNote || `Status laporan diperbarui oleh Administrator menjadi '${selectedStatus}'.`;
 
     try {
-      await reportsApi.updateStatus(report.id, selectedStatus, noteToSave);
+      await reportsApi.updateStatus(activeReport.id, selectedStatus, noteToSave);
       
       // Update local object immediately for smooth UI response
-      report.status = selectedStatus;
-      if (!report.timeline) report.timeline = [];
-      report.timeline.push({
+      activeReport.status = selectedStatus;
+      if (report) report.status = selectedStatus;
+      if (!activeReport.timeline) activeReport.timeline = [];
+      activeReport.timeline.push({
         status: selectedStatus,
         note: noteToSave,
         timestamp: new Date().toISOString()
@@ -85,7 +89,7 @@ export default function ReportDetailModal({ report, onClose }) {
 
       if (fetchReports) fetchReports();
       if (showToast) {
-        showToast(`Status laporan #${report.id} berhasil diubah menjadi '${selectedStatus}'!`, 'success');
+        showToast(`Status laporan #${activeReport.id} berhasil diubah menjadi '${selectedStatus}'!`, 'success');
       }
       setAdminNote('');
     } catch (err) {
@@ -93,14 +97,15 @@ export default function ReportDetailModal({ report, onClose }) {
       if (err.message.includes('sudah') || err.message.includes('sama')) {
         if (showToast) showToast(err.message, 'warning');
       } else {
-        report.status = selectedStatus;
-        if (!report.timeline) report.timeline = [];
-        report.timeline.push({
+        activeReport.status = selectedStatus;
+        if (report) report.status = selectedStatus;
+        if (!activeReport.timeline) activeReport.timeline = [];
+        activeReport.timeline.push({
           status: selectedStatus,
           note: noteToSave,
           timestamp: new Date().toISOString()
         });
-        if (showToast) showToast(`Status laporan #${report.id} diperbarui menjadi '${selectedStatus}'`, 'success');
+        if (showToast) showToast(`Status laporan #${activeReport.id} diperbarui menjadi '${selectedStatus}'`, 'success');
         setAdminNote('');
       }
     } finally {
@@ -130,8 +135,8 @@ export default function ReportDetailModal({ report, onClose }) {
           {/* Header Bar - Sticky & Fixed at Modal Top */}
           <div className="p-4 sm:p-5 bg-slate-900 border-b border-slate-800 flex items-center justify-between flex-shrink-0 sticky top-0 z-20 gap-3">
             <div className="pr-2 min-w-0">
-              <span className="text-xs font-mono text-sky-400 font-bold">{report.id}</span>
-              <h3 className="text-base sm:text-lg font-bold text-white mt-0.5 truncate">{report.title}</h3>
+              <span className="text-xs font-mono text-sky-400 font-bold">{activeReport.id}</span>
+              <h3 className="text-base sm:text-lg font-bold text-white mt-0.5 truncate">{activeReport.title}</h3>
             </div>
 
             <button
@@ -151,19 +156,19 @@ export default function ReportDetailModal({ report, onClose }) {
             <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-slate-900/60 border border-slate-800">
               <div>
                 <span className="text-xs text-slate-400 block mb-1">Status Penanganan saat ini</span>
-                {getStatusBadge(report.status)}
+                {getStatusBadge(activeReport.status)}
               </div>
               <div>
                 <span className="text-xs text-slate-400 block mb-1">Tingkat Urgensi</span>
                 <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${
-                  report.severity === 'Parah' ? 'bg-rose-500/20 text-rose-300' : 'bg-amber-500/20 text-amber-300'
+                  activeReport.severity === 'Parah' ? 'bg-rose-500/20 text-rose-300' : 'bg-amber-500/20 text-amber-300'
                 }`}>
-                  {report.severity || 'Sedang'}
+                  {activeReport.severity || 'Sedang'}
                 </span>
               </div>
               <div>
                 <span className="text-xs text-slate-400 block mb-1">Kategori</span>
-                <span className="text-xs font-semibold text-sky-400">{report.category}</span>
+                <span className="text-xs font-semibold text-sky-400">{activeReport.category}</span>
               </div>
             </div>
 
@@ -178,84 +183,9 @@ export default function ReportDetailModal({ report, onClose }) {
                   onClick={() => setIsEditing(true)}
                   className="px-3.5 py-2 rounded-xl bg-sky-500 text-white font-bold text-xs hover:bg-sky-400 transition-all shadow-md active:scale-95 flex-shrink-0"
                 >
-                  Ubah Data
+                  Ubah Data Laporan
                 </button>
               </div>
-            )}
-
-            {/* ADMIN PROCESSING ACTION PANEL */}
-            {isAdmin && (
-              <form onSubmit={handleAdminStatusUpdate} className="p-5 rounded-2xl bg-gradient-to-r from-indigo-950/60 via-slate-900 to-indigo-950/60 border border-indigo-500/30 space-y-4 shadow-xl">
-                <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
-                  <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs uppercase tracking-wider">
-                    <Shield className="w-4 h-4 text-indigo-400" />
-                    Panel Administrator - Tindak Lanjut & Ubah Status
-                  </div>
-                  <span className="text-[11px] font-mono text-slate-400">
-                    Status Sekarang: <strong className="text-sky-300">{report.status}</strong>
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-2">Pilih Status Baru Laporan (Harus Berbeda):</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {[
-                      { st: 'Menunggu', bg: 'hover:bg-amber-500/20 border-amber-500/40 text-amber-300', active: 'bg-amber-500 text-white border-amber-400' },
-                      { st: 'Diproses', bg: 'hover:bg-sky-500/20 border-sky-500/40 text-sky-300', active: 'bg-sky-500 text-white border-sky-400' },
-                      { st: 'Selesai', bg: 'hover:bg-emerald-500/20 border-emerald-500/40 text-emerald-300', active: 'bg-emerald-500 text-white border-emerald-400' },
-                      { st: 'Ditolak', bg: 'hover:bg-rose-500/20 border-rose-500/40 text-rose-300', active: 'bg-rose-600 text-white border-rose-400' }
-                    ].map((item) => (
-                      <button
-                        key={item.st}
-                        type="button"
-                        onClick={() => setSelectedStatus(item.st)}
-                        className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
-                          selectedStatus === item.st ? item.active : `bg-slate-900 ${item.bg}`
-                        }`}
-                      >
-                        {item.st}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {isSameStatus && (
-                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] font-medium flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
-                    <span>Status yang dipilih saat ini sama dengan status laporan (<strong>{report.status}</strong>). Silakan pilih status baru yang berbeda untuk memperbarui.</span>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Catatan Progres / Penanganan Dinas (Timeline Note):</label>
-                  <textarea
-                    rows={2}
-                    value={adminNote}
-                    onChange={(e) => setAdminNote(e.target.value)}
-                    placeholder={`Contoh: Tim Dinas Bina Marga telah melakukan verifikasi lokasi dan penjadwalan pengaspalan.`}
-                    className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmittingStatus || isSameStatus}
-                  className={`w-full py-3 px-4 rounded-xl font-bold text-xs shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-                    isSameStatus 
-                      ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed shadow-none' 
-                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-indigo-500/25'
-                  }`}
-                >
-                  {isSubmittingStatus ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      {isSameStatus ? 'Pilih Status Berbeda untuk Memperbarui' : 'Simpan & Perbarui Status Laporan SEKARANG'}
-                    </>
-                  )}
-                </button>
-              </form>
             )}
 
             {/* Photo Attachment Card */}
@@ -401,10 +331,14 @@ export default function ReportDetailModal({ report, onClose }) {
       {/* EDIT REPORT MODAL */}
       {isEditing && (
         <EditReportModal
-          report={report}
+          report={activeReport}
           onClose={() => setIsEditing(false)}
-          onUpdated={() => {
+          onUpdated={(updatedObj) => {
             setIsEditing(false);
+            if (updatedObj) {
+              Object.assign(report, updatedObj);
+              Object.assign(activeReport, updatedObj);
+            }
             if (fetchReports) fetchReports();
           }}
         />

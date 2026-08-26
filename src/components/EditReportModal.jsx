@@ -111,7 +111,7 @@ export default function EditReportModal({ report, onClose, onUpdated }) {
     setErrorMsg('');
 
     try {
-      await updateReportDetails(report.id, {
+      const updatedObj = await updateReportDetails(report.id, {
         title,
         category,
         severity,
@@ -124,6 +124,7 @@ export default function EditReportModal({ report, onClose, onUpdated }) {
 
       setIsSubmitting(false);
       setShowSuccessAlert(true);
+      if (onUpdated) onUpdated(updatedObj);
     } catch (error) {
       setIsSubmitting(false);
       setErrorMsg(error.message || 'Gagal memperbarui laporan');
@@ -132,7 +133,6 @@ export default function EditReportModal({ report, onClose, onUpdated }) {
 
   const handleAlertConfirm = () => {
     setShowSuccessAlert(false);
-    if (onUpdated) onUpdated();
     if (onClose) onClose();
   };
 
