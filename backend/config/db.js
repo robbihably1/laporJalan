@@ -287,19 +287,28 @@ async function query(sql, params = []) {
   }
 
   if (sqlUpper.includes("UPDATE USERS SET STATUS")) {
-    if (sqlUpper.includes("WHERE VERIFICATION_TOKEN = ?")) {
-      const token = params[0];
-      const user = MEMORY_USERS.find(u => u.verification_token === token);
-      if (user) {
-        user.status = 'Aktif';
-        user.verification_token = null;
-      }
-    } else {
-      const newStatus = params[0];
-      const targetId = params[1];
-      const user = MEMORY_USERS.find(u => u.id === targetId || u.email === targetId);
-      if (user) {
-        user.status = newStatus;
+    let newStatus = 'Aktif';
+    let targetId = params[0];
+
+    if (sqlUpper.includes("STATUS = 'AKTIF'")) {
+      newStatus = 'Aktif';
+      targetId = params[0];
+    } else if (sqlUpper.includes("STATUS = 'NONAKTIF'")) {
+      newStatus = 'Nonaktif';
+      targetId = params[0];
+    } else if (params[0] === 'Aktif' || params[0] === 'Nonaktif') {
+      newStatus = params[0];
+      targetId = params[1];
+    }
+
+    const user = MEMORY_USERS.find(u => 
+      (targetId && (u.id === targetId || u.email === targetId || u.verification_token === targetId)) ||
+      (params[1] && (u.id === params[1] || u.email === params[1]))
+    );
+
+    if (user) {
+      user.status = newStatus;
+      if (newStatus === 'Aktif') {
         user.verification_token = null;
       }
     }

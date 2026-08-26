@@ -81,7 +81,7 @@ exports.verifyEmail = async (req, res) => {
         const user = rows[0];
         
         // Update status to 'Aktif' and clear verification_token
-        await pool.query("UPDATE users SET status = 'Aktif', verification_token = NULL WHERE id = ? OR email = ?", [user.id, user.email]);
+        await pool.query("UPDATE users SET status = ?, verification_token = NULL WHERE id = ? OR email = ?", ['Aktif', user.id, user.email]);
 
         return res.json({
           success: true,
