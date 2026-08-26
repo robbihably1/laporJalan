@@ -1,9 +1,19 @@
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+import authRoutes from '../backend/routes/authRoutes.js';
+import reportRoutes from '../backend/routes/reportRoutes.js';
+import uploadRoutes from '../backend/routes/uploadRoutes.js';
+import adminRoutes from '../backend/routes/adminRoutes.js';
+import regionRoutes from '../backend/routes/regionRoutes.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -20,13 +30,6 @@ app.use('/uploads', express.static(path.join(__dirname, '../backend/uploads')));
 // Body Parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-
-// Import Backend Routes
-const authRoutes = require('../backend/routes/authRoutes');
-const reportRoutes = require('../backend/routes/reportRoutes');
-const uploadRoutes = require('../backend/routes/uploadRoutes');
-const adminRoutes = require('../backend/routes/adminRoutes');
-const regionRoutes = require('../backend/routes/regionRoutes');
 
 // Mount routes both with /api prefix and without for Vercel serverless compatibility
 app.use('/api/auth', authRoutes);
@@ -70,4 +73,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-module.exports = app;
+export default app;
