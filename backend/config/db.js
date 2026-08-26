@@ -49,6 +49,8 @@ let MEMORY_ADMINS = [
   }
 ];
 
+const DELETED_USERS_SET = new Set();
+
 // In-Memory Data Store fallback when running on Vercel Serverless without C++ native SQLite binary
 let MEMORY_USERS = [
   {
@@ -364,5 +366,7 @@ module.exports = {
   pool: { query },
   dbInstance,
   dbPath,
-  checkConnection
+  checkConnection,
+  MEMORY_USERS,
+  DELETED_USERS_SET
 };
