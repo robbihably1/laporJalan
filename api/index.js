@@ -61,4 +61,13 @@ app.use((req, res) => {
   });
 });
 
+// Global Express Error Handler for Serverless
+app.use((err, req, res, next) => {
+  console.error("Serverless API Error:", err);
+  res.status(500).json({
+    success: false,
+    message: err.message || 'Terjadi kesalahan internal pada server backend'
+  });
+});
+
 module.exports = app;

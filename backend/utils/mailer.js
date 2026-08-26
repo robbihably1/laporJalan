@@ -5,47 +5,32 @@ dotenv.config();
 let transporter = null;
 
 async function initMailer() {
-  // Option 1: Use Custom SMTP Server configured in backend/.env
+  if (transporter) return transporter;
+
+  // Option 1: Use Custom SMTP Server configured in backend/.env or Vercel Env Vars
   if (process.env.SMTP_HOST && process.env.SMTP_USER) {
     try {
       transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for 587
+        secure: process.env.SMTP_SECURE === 'true',
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
         },
       });
-      console.log(` Configured Custom SMTP Server (${process.env.SMTP_HOST}:${process.env.SMTP_USER})`);
-      return;
+      return transporter;
     } catch (err) {
-      console.warn(' Custom SMTP Connection Warning:', err.message);
+      console.warn('Custom SMTP Connection Warning:', err.message);
     }
   }
 
-  // Option 2: Fallback to Ethereal Test SMTP Server (Auto Generated Test Mailbox)
-  try {
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-    console.log(' Ethereal Test SMTP Mailer initialized successfully!');
-  } catch (err) {
-    console.warn(' Ethereal SMTP fallback warning:', err.message);
-    transporter = nodemailer.createTransport({
-      jsonTransport: true
-    });
-  }
+  // Option 2: Fallback to JsonTransport for Serverless safety (Zero top-level network requests)
+  transporter = nodemailer.createTransport({
+    jsonTransport: true
+  });
+  return transporter;
 }
-
-initMailer();
 
 /**
  * Send Account Activation Email
