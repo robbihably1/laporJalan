@@ -188,6 +188,81 @@ export default function ReportDetailModal({ report, onClose }) {
               </div>
             )}
 
+            {/* ADMIN PROCESSING ACTION PANEL */}
+            {isAdmin && (
+              <form onSubmit={handleAdminStatusUpdate} className="p-5 rounded-2xl bg-gradient-to-r from-indigo-950/60 via-slate-900 to-indigo-950/60 border border-indigo-500/30 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
+                  <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs uppercase tracking-wider">
+                    <Shield className="w-4 h-4 text-indigo-400" />
+                    <span>Panel Administrator - Tindak Lanjut & Ubah Status</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    Status Sekarang: <strong className="text-sky-300">{activeReport.status}</strong>
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-2">Pilih Status Baru Laporan (Harus Berbeda):</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { st: 'Menunggu', bg: 'hover:bg-amber-500/20 border-amber-500/40 text-amber-300', active: 'bg-amber-500 text-white border-amber-400' },
+                      { st: 'Diproses', bg: 'hover:bg-sky-500/20 border-sky-500/40 text-sky-300', active: 'bg-sky-500 text-white border-sky-400' },
+                      { st: 'Selesai', bg: 'hover:bg-emerald-500/20 border-emerald-500/40 text-emerald-300', active: 'bg-emerald-500 text-white border-emerald-400' },
+                      { st: 'Ditolak', bg: 'hover:bg-rose-500/20 border-rose-500/40 text-rose-300', active: 'bg-rose-600 text-white border-rose-400' }
+                    ].map((item) => (
+                      <button
+                        key={item.st}
+                        type="button"
+                        onClick={() => setSelectedStatus(item.st)}
+                        className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
+                          selectedStatus === item.st ? item.active : `bg-slate-900 ${item.bg}`
+                        }`}
+                      >
+                        {item.st}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {isSameStatus && (
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] font-medium flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+                    <span>Status yang dipilih saat ini sama dengan status laporan (<strong>{activeReport.status}</strong>). Silakan pilih status baru yang berbeda untuk memperbarui.</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Catatan Progres / Penanganan Dinas (Timeline Note):</label>
+                  <textarea
+                    rows={2}
+                    value={adminNote}
+                    onChange={(e) => setAdminNote(e.target.value)}
+                    placeholder="Contoh: Tim Dinas Bina Marga telah melakukan verifikasi lokasi dan penjadwalan pengaspalan."
+                    className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingStatus || isSameStatus}
+                  className={`w-full py-3 px-4 rounded-xl font-bold text-xs shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                    isSameStatus 
+                      ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed shadow-none' 
+                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-indigo-500/25'
+                  }`}
+                >
+                  {isSubmittingStatus ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      {isSameStatus ? 'Pilih Status Berbeda untuk Memperbarui' : 'Simpan & Perbarui Status Laporan SEKARANG'}
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+
             {/* Photo Attachment Card */}
             <div className="space-y-2">
               <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Foto Bukti Terlampir</h4>
