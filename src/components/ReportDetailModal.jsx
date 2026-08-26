@@ -128,17 +128,19 @@ export default function ReportDetailModal({ report, onClose }) {
         <div className="glass-card w-full max-w-3xl max-h-[90vh] rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl flex flex-col relative text-slate-100 my-auto">
           
           {/* Header Bar - Sticky & Fixed at Modal Top */}
-          <div className="p-5 bg-slate-900 border-b border-slate-800 flex items-center justify-between flex-shrink-0 sticky top-0 z-20">
-            <div>
+          <div className="p-4 sm:p-5 bg-slate-900 border-b border-slate-800 flex items-center justify-between flex-shrink-0 sticky top-0 z-20 gap-3">
+            <div className="pr-2 min-w-0">
               <span className="text-xs font-mono text-sky-400 font-bold">{report.id}</span>
-              <h3 className="text-lg font-bold text-white mt-0.5">{report.title}</h3>
+              <h3 className="text-base sm:text-lg font-bold text-white mt-0.5 truncate">{report.title}</h3>
             </div>
 
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-lg transition-all active:scale-95 flex-shrink-0 flex items-center justify-center border border-rose-400"
+              title="Tutup Detail Laporan"
+              aria-label="Tutup"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 text-white stroke-[2.5]" />
             </button>
           </div>
 
@@ -410,32 +412,41 @@ export default function ReportDetailModal({ report, onClose }) {
 
       {/* FULL-SIZE IMAGE LIGHTBOX MODAL */}
       {isFullImageOpen && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-xl animate-fade-in">
-          <div className="relative max-w-5xl w-full max-h-[95vh] flex flex-col items-center justify-center">
+        <div 
+          onClick={() => setIsFullImageOpen(false)}
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-6 bg-slate-950/95 backdrop-blur-xl animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-5xl w-full max-h-[95vh] flex flex-col items-center justify-center"
+          >
             
             {/* Top Toolbar */}
-            <div className="w-full flex items-center justify-between mb-3 px-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                <ImageIcon className="w-4 h-4 text-emerald-600 dark:text-sky-400" />
-                <span>Lampiran Foto Ukuran Asli - {report.id}</span>
+            <div className="w-full flex items-center justify-between gap-2 mb-3 px-1">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-200 truncate">
+                <ImageIcon className="w-4 h-4 text-sky-400 flex-shrink-0" />
+                <span className="truncate">Lampiran Foto Ukuran Asli - {report.id}</span>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <a
                   href={report.photoUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 border border-emerald-500/40 shadow-md transition-all active:scale-95 flex-shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold flex items-center gap-1.5 border border-slate-700 shadow-md transition-all active:scale-95 flex-shrink-0"
                 >
-                  <ExternalLink className="w-3.5 h-3.5 text-white" /> Buka Tab Baru
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Buka Tab Baru</span>
                 </a>
 
+                {/* High-Visibility Red Close Button */}
                 <button
                   onClick={() => setIsFullImageOpen(false)}
-                  className="p-2.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-all shadow-lg flex items-center justify-center flex-shrink-0"
+                  className="p-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold border border-rose-400 shadow-xl transition-all active:scale-95 flex items-center justify-center flex-shrink-0"
                   title="Tutup Preview Foto"
+                  aria-label="Tutup"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6 text-white stroke-[2.5]" />
                 </button>
               </div>
             </div>

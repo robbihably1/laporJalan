@@ -33,24 +33,68 @@ export default function EditReportModal({ report, onClose, onUpdated }) {
 
   if (!report) return null;
 
-  // File Upload Handler
+  // Helper to compress camera/upload images to max 900px and JPEG quality 0.75 (~50KB)
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 900;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Compress to lightweight JPEG Data URL (~50KB)
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+          resolve(dataUrl);
+        };
+        img.onerror = () => {
+          reader.readAsDataURL(file);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // File Upload Handler (Clean Compression + Fallback)
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setIsUploadingPhoto(true);
     try {
-      const res = await uploadApi.uploadPhoto(file);
-      if (res && res.url) {
-        setPhotoUrl(res.url);
+      // 1. Compress image client-side first for instant preview & serverless safety
+      const compressedDataUrl = await compressImage(file);
+      setPhotoUrl(compressedDataUrl);
+
+      // 2. Try server upload endpoint
+      try {
+        const res = await uploadApi.uploadPhoto(file);
+        if (res && res.url) {
+          setPhotoUrl(res.url);
+        }
+      } catch (err) {
+        console.warn("Backend photo upload notice, using compressed Data URL:", err.message);
       }
     } catch (err) {
-      console.warn("Photo upload fallback:", err.message);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
+      console.warn("Image processing error:", err.message);
     } finally {
       setIsUploadingPhoto(false);
     }

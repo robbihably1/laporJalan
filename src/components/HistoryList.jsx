@@ -527,34 +527,43 @@ export default function HistoryList({ onAddNewReport }) {
         />
       )}
 
-      {/* Standalone Attachment Lightbox Modal (Full screen backdrop inset-0 z-40 behind Navbar z-50 with pt-20 spacing) */}
+      {/* Standalone Attachment Lightbox Modal */}
       {previewPhotoReport && (
-        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center p-3 sm:p-6 pt-20 bg-slate-950/95 backdrop-blur-xl animate-fade-in">
-          <div className="relative max-w-5xl w-full max-h-[calc(100vh-6rem)] flex flex-col items-center justify-center my-auto">
+        <div 
+          onClick={() => setPreviewPhotoReport(null)}
+          className="fixed inset-0 z-[10000] flex flex-col items-center justify-center p-3 sm:p-6 pt-16 bg-slate-950/95 backdrop-blur-xl animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            className="relative max-w-5xl w-full max-h-[calc(100vh-5rem)] flex flex-col items-center justify-center my-auto"
+          >
             
             {/* Top Toolbar */}
-            <div className="w-full flex items-center justify-between mb-3 px-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                <ImageIcon className="w-4 h-4 text-emerald-600 dark:text-sky-400" />
-                <span>Lampiran Foto Ukuran Asli - {previewPhotoReport.id}</span>
+            <div className="w-full flex items-center justify-between gap-2 mb-3 px-1">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-200 truncate">
+                <ImageIcon className="w-4 h-4 text-sky-400 flex-shrink-0" />
+                <span className="truncate">Lampiran Foto - {previewPhotoReport.id}</span>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <a
                   href={previewPhotoReport.photoUrl || previewPhotoReport.image}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 border border-emerald-500/40 shadow-md transition-all active:scale-95 flex-shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold flex items-center gap-1.5 border border-slate-700 shadow-md transition-all active:scale-95 flex-shrink-0"
                 >
-                  <ExternalLink className="w-3.5 h-3.5 text-white" /> Buka Tab Baru
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Buka Tab Baru</span>
                 </a>
 
+                {/* High-Visibility Red Close Button for Mobile & Desktop */}
                 <button
                   onClick={() => setPreviewPhotoReport(null)}
-                  className="p-2.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-all shadow-lg flex items-center justify-center flex-shrink-0"
+                  className="p-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold border border-rose-400 shadow-xl transition-all active:scale-95 flex items-center justify-center flex-shrink-0"
                   title="Tutup Preview Foto"
+                  aria-label="Tutup"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6 text-white stroke-[2.5]" />
                 </button>
               </div>
             </div>
