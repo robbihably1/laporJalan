@@ -29,7 +29,84 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   </head>
   <body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen selection:bg-sky-500 selection:text-white">
-    <div id="root"></div>
+    <div id="root">
+      <!-- Instant First-Paint Loading Screen (Prevents White Blank Screen on Mobile/Desktop) -->
+      <style>
+        .app-init-loader {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #020617;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          z-index: 999999;
+          font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+          color: #f8fafc;
+          padding: 20px;
+        }
+        .green-spinner-ring {
+          position: relative;
+          width: 60px;
+          height: 60px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 20px;
+        }
+        .green-spinner-ring::before {
+          content: '';
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          border: 4px solid rgba(16, 185, 129, 0.15);
+          border-top-color: #10b981;
+          box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+          animation: app-spin 0.85s linear infinite;
+        }
+        .green-spinner-glow {
+          width: 22px;
+          height: 22px;
+          background-color: #10b981;
+          border-radius: 50%;
+          box-shadow: 0 0 20px #10b981, 0 0 40px rgba(16, 185, 129, 0.6);
+          animation: app-pulse 1.4s ease-in-out infinite;
+        }
+        @keyframes app-spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes app-pulse {
+          0%, 100% { transform: scale(0.85); opacity: 0.7; }
+          50% { transform: scale(1.15); opacity: 1; }
+        }
+        .app-init-title {
+          font-size: 20px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          color: #ffffff;
+          margin-bottom: 6px;
+        }
+        .app-init-subtitle {
+          font-size: 11px;
+          font-weight: 700;
+          color: #10b981;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+      </style>
+      <div class="app-init-loader">
+        <div class="green-spinner-ring">
+          <div class="green-spinner-glow"></div>
+        </div>
+        <div class="app-init-title">LaporJalan</div>
+        <div class="app-init-subtitle">Memuat Portal Pelaporan...</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
       (function() {
