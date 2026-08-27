@@ -27,7 +27,9 @@ app.use(cors({
 }));
 app.options('*', cors());
 
-// Static Image serving (supports project public/image directory & Vercel /tmp)
+import os from 'os';
+
+// Static Image serving (supports project public/image directory & Vercel temp dir)
 const getImageDir = () => {
   const publicImage = path.resolve(__dirname, '../public/image');
   if (fs.existsSync(publicImage)) return publicImage;
@@ -41,7 +43,7 @@ app.use('/image', express.static(imageDir));
 app.use('/uploads', express.static(path.join(imageDir, 'lampiran')));
 
 if (process.env.VERCEL) {
-  const tmpImage = '/tmp/image';
+  const tmpImage = path.join(os.tmpdir(), 'image');
   if (fs.existsSync(tmpImage)) {
     app.use('/image', express.static(tmpImage));
     app.use('/uploads', express.static(path.join(tmpImage, 'lampiran')));

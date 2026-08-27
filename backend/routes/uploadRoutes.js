@@ -3,11 +3,12 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
-// Helper to get image storage path (inside project public/image directory or Vercel /tmp)
+// Helper to get image storage path (inside project public/image directory or OS temp dir for Vercel)
 const getImageBaseDir = () => {
   if (process.env.VERCEL) {
-    const tmpDir = '/tmp/image';
+    const tmpDir = path.join(os.tmpdir(), 'image');
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
     return tmpDir;
   }
@@ -63,68 +64,63 @@ const uploadProfil = multer({ storage: profilStorage, limits: { fileSize: 10 * 1
 const uploadLampiran = multer({ storage: lampiranStorage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 // 1. Upload Profile Photo: POST /api/upload/profil
-router.post('/profil', (req, res, next) => {
-  uploadProfil.single('photo')(req, res, (err) => {
+router.post('/profil', (req, res) => {
+  uploadProfil.any()(req, res, (err) => {
     if (err) {
-      uploadProfil.single('avatar')(req, res, (err2) => {
-        if (err2) return res.status(400).json({ success: false, message: err2.message });
-        next();
-      });
-    } else {
-      next();
+      return res.status(400).json({ success: false, message: 'Gagal memproses file foto profil: ' + err.message });
     }
-  });
-}, (req, res) => {
-  try {
-    if (!req.file) {
+    const uploadedFile = (req.files && req.files.length > 0) ? req.files[0] : req.file;
+    if (!uploadedFile) {
       return res.status(400).json({ success: false, message: 'Tidak ada file foto profil yang diunggah!' });
     }
-    const relativeUrl = `/image/profil/${req.file.filename}`;
+    const relativeUrl = `/image/profil/${uploadedFile.filename}`;
     return res.json({
       success: true,
       message: 'Foto profil berhasil diunggah!',
       url: relativeUrl,
-      filename: req.file.filename
+      filename: uploadedFile.filename
     });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Gagal mengunggah foto profil: ' + error.message });
-  }
+  });
 });
 
 // 2. Upload Lampiran Photo: POST /api/upload/lampiran
-router.post('/lampiran', uploadLampiran.single('photo'), (req, res) => {
-  try {
-    if (!req.file) {
+router.post('/lampiran', (req, res) => {
+  uploadLampiran.any()(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: 'Gagal memproses file lampiran: ' + err.message });
+    }
+    const uploadedFile = (req.files && req.files.length > 0) ? req.files[0] : req.file;
+    if (!uploadedFile) {
       return res.status(400).json({ success: false, message: 'Tidak ada file lampiran yang diunggah!' });
     }
-    const relativeUrl = `/image/lampiran/${req.file.filename}`;
+    const relativeUrl = `/image/lampiran/${uploadedFile.filename}`;
     return res.json({
       success: true,
       message: 'Lampiran foto berhasil diunggah!',
       url: relativeUrl,
-      filename: req.file.filename
+      filename: uploadedFile.filename
     });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Gagal mengunggah lampiran foto: ' + error.message });
-  }
+  });
 });
 
-// 3. Default Upload Endpoint (for backwards compatibility): POST /api/upload
-router.post('/', uploadLampiran.single('photo'), (req, res) => {
-  try {
-    if (!req.file) {
+// 3. Default Upload Endpoint: POST /api/upload
+router.post('/', (req, res) => {
+  uploadLampiran.any()(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: 'Gagal memproses file: ' + err.message });
+    }
+    const uploadedFile = (req.files && req.files.length > 0) ? req.files[0] : req.file;
+    if (!uploadedFile) {
       return res.status(400).json({ success: false, message: 'Tidak ada file foto yang diunggah!' });
     }
-    const relativeUrl = `/image/lampiran/${req.file.filename}`;
+    const relativeUrl = `/image/lampiran/${uploadedFile.filename}`;
     return res.json({
       success: true,
       message: 'Foto berhasil diunggah!',
       url: relativeUrl,
-      filename: req.file.filename
+      filename: uploadedFile.filename
     });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Gagal mengunggah foto: ' + error.message });
-  }
+  });
 });
 
 module.exports = router;
