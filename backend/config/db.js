@@ -216,6 +216,16 @@ if (mysqlPool) {
         );
       `);
       await mysqlPool.query(`
+        CREATE TABLE IF NOT EXISTS images (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          filename VARCHAR(255) NOT NULL,
+          folder VARCHAR(50) NOT NULL DEFAULT 'lampiran',
+          mime_type VARCHAR(100) NOT NULL DEFAULT 'image/jpeg',
+          data LONGTEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await mysqlPool.query(`
         CREATE TABLE IF NOT EXISTS provinces (
           id VARCHAR(10) PRIMARY KEY,
           name VARCHAR(100) NOT NULL

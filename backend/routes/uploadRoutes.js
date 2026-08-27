@@ -2,80 +2,65 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const os = require('os');
+const { pool } = require('../config/db');
 
-// Initialize global image memory cache
-if (!global.IMAGE_CACHE) {
-  global.IMAGE_CACHE = new Map();
-}
-//test committ
-
-// Helper to get image storage path for local development & Vercel
-const getImageBaseDir = () => {
-  if (process.env.VERCEL) {
-    const tmpDir = path.join(os.tmpdir(), 'image');
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-    return tmpDir;
-  }
-  const publicDir = path.resolve(__dirname, '../../public/image');
-  if (fs.existsSync(publicDir)) return publicDir;
-  const projectDir = path.resolve(__dirname, '../../image');
-  if (fs.existsSync(projectDir)) return projectDir;
-  const outerImageDir = path.resolve(__dirname, '../../../image');
-  if (!fs.existsSync(outerImageDir)) {
-    fs.mkdirSync(outerImageDir, { recursive: true });
-  }
-  return outerImageDir;
-};
-
-const getProfilDir = () => {
-  const dir = path.join(getImageBaseDir(), 'profil');
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return dir;
-};
-
-const getLampiranDir = () => {
-  const dir = path.join(getImageBaseDir(), 'lampiran');
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return dir;
-};
-
+// Multer: simpan di memory, bukan disk
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }
+  limits: { fileSize: 10 * 1024 * 1024 } // maks 10MB
 });
 
-// Helper to save file & return clean relative URL (/image/profil/profile-xxx.jpg)
-const saveUploadedFile = (uploadedFile, folderName) => {
-  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-  const ext = path.extname(uploadedFile.originalname) || '.jpg';
+/**
+ * Simpan file ke tabel `images` di database, return ID & URL relatif.
+ * URL format: /api/upload/image/<id>
+ */
+const saveFileToDB = async (file, folderName) => {
+  const base64Data = file.buffer.toString('base64');
+  const mimeType = file.mimetype || 'image/jpeg';
+  const ext = path.extname(file.originalname) || '.jpg';
   const prefix = folderName === 'profil' ? 'profile-' : 'lampiran-';
+  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
   const filename = prefix + uniqueSuffix + ext;
 
-  const targetDir = folderName === 'profil' ? getProfilDir() : getLampiranDir();
-  const filePath = path.join(targetDir, filename);
+  const [result] = await pool.query(
+    `INSERT INTO images (filename, folder, mime_type, data) VALUES (?, ?, ?, ?)`,
+    [filename, folderName, mimeType, base64Data]
+  );
 
-  try {
-    fs.writeFileSync(filePath, uploadedFile.buffer);
-  } catch (e) {
-    console.warn("Write file notice:", e.message);
-  }
-
-  const relativeUrl = `/image/${folderName}/${filename}`;
-  if (global.IMAGE_CACHE) {
-    global.IMAGE_CACHE.set(relativeUrl, {
-      buffer: uploadedFile.buffer,
-      mimeType: uploadedFile.mimetype || 'image/jpeg'
-    });
-  }
-
-  return { relativeUrl, filename };
+  const imageId = result.insertId;
+  const relativeUrl = `/api/upload/image/${imageId}`;
+  return { relativeUrl, filename, imageId };
 };
 
-// 1. Upload Profile Photo: POST /api/upload/profil
+// ──────────────────────────────────────────────
+// GET /api/upload/image/:id — Serve gambar dari DB
+// ──────────────────────────────────────────────
+router.get('/image/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.query(
+      'SELECT mime_type, data FROM images WHERE id = ?',
+      [id]
+    );
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Gambar tidak ditemukan' });
+    }
+    const { mime_type, data } = rows[0];
+    const buffer = Buffer.from(data, 'base64');
+    res.setHeader('Content-Type', mime_type || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.send(buffer);
+  } catch (err) {
+    console.error('Gagal mengambil gambar dari DB:', err.message);
+    return res.status(500).json({ success: false, message: 'Gagal mengambil gambar' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// POST /api/upload/profil — Upload foto profil
+// ──────────────────────────────────────────────
 router.post('/profil', (req, res) => {
-  upload.any()(req, res, (err) => {
+  upload.any()(req, res, async (err) => {
     if (err) {
       return res.status(400).json({ success: false, message: 'Gagal memproses file foto profil: ' + err.message });
     }
@@ -83,19 +68,26 @@ router.post('/profil', (req, res) => {
     if (!uploadedFile) {
       return res.status(400).json({ success: false, message: 'Tidak ada file foto profil yang diunggah!' });
     }
-    const { relativeUrl, filename } = saveUploadedFile(uploadedFile, 'profil');
-    return res.json({
-      success: true,
-      message: 'Foto profil berhasil diunggah!',
-      url: relativeUrl,
-      filename
-    });
+    try {
+      const { relativeUrl, filename } = await saveFileToDB(uploadedFile, 'profil');
+      return res.json({
+        success: true,
+        message: 'Foto profil berhasil diunggah!',
+        url: relativeUrl,
+        filename
+      });
+    } catch (dbErr) {
+      console.error('Gagal simpan profil ke DB:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Gagal menyimpan foto profil ke database: ' + dbErr.message });
+    }
   });
 });
 
-// 2. Upload Lampiran Photo: POST /api/upload/lampiran
+// ──────────────────────────────────────────────
+// POST /api/upload/lampiran — Upload foto laporan
+// ──────────────────────────────────────────────
 router.post('/lampiran', (req, res) => {
-  upload.any()(req, res, (err) => {
+  upload.any()(req, res, async (err) => {
     if (err) {
       return res.status(400).json({ success: false, message: 'Gagal memproses file lampiran: ' + err.message });
     }
@@ -103,19 +95,26 @@ router.post('/lampiran', (req, res) => {
     if (!uploadedFile) {
       return res.status(400).json({ success: false, message: 'Tidak ada file lampiran yang diunggah!' });
     }
-    const { relativeUrl, filename } = saveUploadedFile(uploadedFile, 'lampiran');
-    return res.json({
-      success: true,
-      message: 'Lampiran foto berhasil diunggah!',
-      url: relativeUrl,
-      filename
-    });
+    try {
+      const { relativeUrl, filename } = await saveFileToDB(uploadedFile, 'lampiran');
+      return res.json({
+        success: true,
+        message: 'Lampiran foto berhasil diunggah!',
+        url: relativeUrl,
+        filename
+      });
+    } catch (dbErr) {
+      console.error('Gagal simpan lampiran ke DB:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Gagal menyimpan lampiran ke database: ' + dbErr.message });
+    }
   });
 });
 
-// 3. Default Upload Endpoint: POST /api/upload
+// ──────────────────────────────────────────────
+// POST /api/upload — Default upload endpoint
+// ──────────────────────────────────────────────
 router.post('/', (req, res) => {
-  upload.any()(req, res, (err) => {
+  upload.any()(req, res, async (err) => {
     if (err) {
       return res.status(400).json({ success: false, message: 'Gagal memproses file: ' + err.message });
     }
@@ -123,15 +122,19 @@ router.post('/', (req, res) => {
     if (!uploadedFile) {
       return res.status(400).json({ success: false, message: 'Tidak ada file foto yang diunggah!' });
     }
-    const { relativeUrl, filename } = saveUploadedFile(uploadedFile, 'lampiran');
-    return res.json({
-      success: true,
-      message: 'Foto berhasil diunggah!',
-      url: relativeUrl,
-      filename
-    });
+    try {
+      const { relativeUrl, filename } = await saveFileToDB(uploadedFile, 'lampiran');
+      return res.json({
+        success: true,
+        message: 'Foto berhasil diunggah!',
+        url: relativeUrl,
+        filename
+      });
+    } catch (dbErr) {
+      console.error('Gagal simpan foto ke DB:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Gagal menyimpan foto ke database: ' + dbErr.message });
+    }
   });
 });
 
 module.exports = router;
-

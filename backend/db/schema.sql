@@ -59,6 +59,17 @@ CREATE TABLE IF NOT EXISTS report_timelines (
     FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 5. Table Images (penyimpanan gambar persisten di database)
+-- Gambar disimpan sebagai base64 agar tidak hilang saat deploy ulang di Vercel
+CREATE TABLE IF NOT EXISTS images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    filename VARCHAR(255) NOT NULL,
+    folder VARCHAR(50) NOT NULL DEFAULT 'lampiran',
+    mime_type VARCHAR(100) NOT NULL DEFAULT 'image/jpeg',
+    data LONGTEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- SEED ADMIN & USER
 INSERT INTO admin (id, name, email, password, role)
 VALUES ('ADM-001', 'Admin Bina Marga', 'robbihably10@gmail.com', '$2a$10$vN0o5Y2P6hO6U3.qC3O6uO8f9Z5U5X5Y5Z5a5b5c5d5e5f5g5h', 'admin')

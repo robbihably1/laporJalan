@@ -17,46 +17,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-const os = require('os');
-
-// Dynamic Image Serving Route (Runtime lookup for IMAGE_CACHE, public/image, project image, and OS temp dir)
-app.get(['/image/:folder/:filename', '/uploads/:filename'], (req, res) => {
-  const folder = req.params.folder || 'lampiran';
-  const filename = req.params.filename;
-  const relativeUrl = `/image/${folder}/${filename}`;
-
-  if (global.IMAGE_CACHE && global.IMAGE_CACHE.has(relativeUrl)) {
-    const cached = global.IMAGE_CACHE.get(relativeUrl);
-    res.setHeader('Content-Type', cached.mimeType || 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    return res.send(cached.buffer);
-  }
-
-  const publicPath = path.resolve(__dirname, '../public/image', folder, filename);
-  if (fs.existsSync(publicPath)) return res.sendFile(publicPath);
-
-  const projectPath = path.resolve(__dirname, '../image', folder, filename);
-  if (fs.existsSync(projectPath)) return res.sendFile(projectPath);
-
-  const tmpPath = path.join(os.tmpdir(), 'image', folder, filename);
-  if (fs.existsSync(tmpPath)) return res.sendFile(tmpPath);
-
-  return res.status(404).json({ success: false, message: 'File gambar tidak ditemukan' });
-});
-
-// Serve uploaded static image files (supports project public/image directory)
-const getImageDir = () => {
-  const publicDir = path.resolve(__dirname, '../public/image');
-  if (fs.existsSync(publicDir)) return publicDir;
-  const projectDir = path.resolve(__dirname, '../image');
-  if (fs.existsSync(projectDir)) return projectDir;
-  return path.resolve(__dirname, '../../image');
-};
-
-const outerImageDir = getImageDir();
-app.use('/image', express.static(outerImageDir));
-app.use('/uploads', express.static(path.join(outerImageDir, 'lampiran')));
-
 // Express Body Parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
