@@ -111,17 +111,40 @@ export const authApi = {
 // UPLOAD API
 // ----------------------------------------------------
 export const uploadApi = {
+  uploadProfil: async (file) => {
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    return fetchApi('/upload/profil', {
+      method: 'POST',
+      body: formData,
+      isFormData: true,
+    });
+  },
+
+  uploadLampiran: async (file) => {
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    return fetchApi('/upload/lampiran', {
+      method: 'POST',
+      body: formData,
+      isFormData: true,
+    });
+  },
+
   uploadPhoto: async (file) => {
     const formData = new FormData();
     formData.append('photo', file);
 
-    return fetchApi('/upload', {
+    return fetchApi('/upload/lampiran', {
       method: 'POST',
       body: formData,
       isFormData: true,
     });
   },
 };
+
 
 // ----------------------------------------------------
 // REPORTS API

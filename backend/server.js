@@ -17,8 +17,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Serve uploaded static image files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve uploaded static image files (outer image directory containing profil and lampiran)
+const outerImageDir = path.resolve(__dirname, '../../image');
+app.use('/image', express.static(outerImageDir));
+app.use('/uploads', express.static(path.join(outerImageDir, 'lampiran')));
 
 // Express Body Parsers
 app.use(express.json({ limit: '10mb' }));

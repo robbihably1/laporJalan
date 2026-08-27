@@ -73,32 +73,25 @@ export default function EditReportModal({ report, onClose, onUpdated }) {
     });
   };
 
-  // File Upload Handler (Clean Compression + Fallback)
+  // File Upload Handler (Stores in image/lampiran/ as normal image file)
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setIsUploadingPhoto(true);
     try {
-      // 1. Compress image client-side first for instant preview & serverless safety
-      const compressedDataUrl = await compressImage(file);
-      setPhotoUrl(compressedDataUrl);
-
-      // 2. Try server upload endpoint
-      try {
-        const res = await uploadApi.uploadPhoto(file);
-        if (res && res.url) {
-          setPhotoUrl(res.url);
-        }
-      } catch (err) {
-        console.warn("Backend photo upload notice, using compressed Data URL:", err.message);
+      const res = await uploadApi.uploadLampiran(file);
+      if (res && res.url) {
+        setPhotoUrl(res.url);
       }
     } catch (err) {
-      console.warn("Image processing error:", err.message);
+      console.warn("Upload lampiran error:", err.message);
+      setErrorMsg("Gagal mengunggah foto lampiran: " + err.message);
     } finally {
       setIsUploadingPhoto(false);
     }
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();

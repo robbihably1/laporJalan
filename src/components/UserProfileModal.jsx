@@ -111,32 +111,25 @@ export default function UserProfileModal({ onClose }) {
     });
   };
 
-  // Handle Avatar Upload with Clean Compression
+  // Handle Avatar Upload directly to backend server (stored in image/profil/)
   const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setIsUploading(true);
     try {
-      // 1. Compress avatar image client-side first
-      const compressedDataUrl = await compressAvatar(file);
-      setAvatar(compressedDataUrl);
-
-      // 2. Try server upload endpoint if available
-      try {
-        const res = await uploadApi.uploadPhoto(file);
-        if (res && res.url) {
-          setAvatar(res.url);
-        }
-      } catch (err) {
-        console.warn("Avatar server upload notice, using compressed Data URL:", err.message);
+      const res = await uploadApi.uploadProfil(file);
+      if (res && res.url) {
+        setAvatar(res.url);
       }
     } catch (err) {
-      console.warn("Avatar processing error:", err.message);
+      console.warn("Upload profil error:", err.message);
+      alert("Gagal mengunggah foto profil: " + err.message);
     } finally {
       setIsUploading(false);
     }
   };
+
 
   // Submit Profile Update
   const handleSubmit = async (e) => {
