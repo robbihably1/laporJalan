@@ -18,8 +18,25 @@ app.use(cors({
 }));
 
 // Express Body Parsers
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Fallback static serving untuk file gambar lama (hanya aktif di lokal / non-Vercel)
+// Melayani path /image/... dan /uploads/... dari folder lokal
+if (!process.env.VERCEL) {
+  const fs = require('fs');
+  const uploadsDir = path.join(__dirname, 'uploads');
+  const publicImageDir = path.resolve(__dirname, '../public/image');
+
+  if (fs.existsSync(uploadsDir)) {
+    app.use('/uploads', express.static(uploadsDir));
+    app.use('/image/lampiran', express.static(uploadsDir));
+    app.use('/image/profil', express.static(uploadsDir));
+  }
+  if (fs.existsSync(publicImageDir)) {
+    app.use('/image', express.static(publicImageDir));
+  }
+}
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
