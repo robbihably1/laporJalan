@@ -10,7 +10,7 @@
       "src": "api/index.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/db/**"]
+        "includeFiles": ["public/image/**", "backend/db/**"]
       }
     }
   ],
@@ -21,6 +21,10 @@
     },
     {
       "src": "/uploads/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/image/(.*)",
       "dest": "/api/index.js"
     },
     {

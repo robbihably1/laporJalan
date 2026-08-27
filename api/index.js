@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import fs from 'fs';
+
 import authRoutes from '../backend/routes/authRoutes.js';
 import reportRoutes from '../backend/routes/reportRoutes.js';
 import uploadRoutes from '../backend/routes/uploadRoutes.js';
@@ -24,10 +26,26 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Static Image serving (outer image directory)
-const outerImageDir = path.resolve(__dirname, '../../image');
-app.use('/image', express.static(outerImageDir));
-app.use('/uploads', express.static(path.join(outerImageDir, 'lampiran')));
+// Static Image serving (supports project public/image directory & Vercel /tmp)
+const getImageDir = () => {
+  const publicImage = path.resolve(__dirname, '../public/image');
+  if (fs.existsSync(publicImage)) return publicImage;
+  const projectImage = path.resolve(__dirname, '../image');
+  if (fs.existsSync(projectImage)) return projectImage;
+  return path.resolve(__dirname, '../../image');
+};
+
+const imageDir = getImageDir();
+app.use('/image', express.static(imageDir));
+app.use('/uploads', express.static(path.join(imageDir, 'lampiran')));
+
+if (process.env.VERCEL) {
+  const tmpImage = '/tmp/image';
+  if (fs.existsSync(tmpImage)) {
+    app.use('/image', express.static(tmpImage));
+    app.use('/uploads', express.static(path.join(tmpImage, 'lampiran')));
+  }
+}
 
 // Body Parsers
 app.use(express.json({ limit: '10mb' }));

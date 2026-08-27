@@ -4,9 +4,17 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Helper to get image storage path outside project directory
+// Helper to get image storage path (inside project public/image directory or Vercel /tmp)
 const getImageBaseDir = () => {
-  // Check relative path ../../../image from laporjalan/backend/routes
+  if (process.env.VERCEL) {
+    const tmpDir = '/tmp/image';
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+    return tmpDir;
+  }
+  const publicDir = path.resolve(__dirname, '../../public/image');
+  if (fs.existsSync(publicDir)) return publicDir;
+  const projectDir = path.resolve(__dirname, '../../image');
+  if (fs.existsSync(projectDir)) return projectDir;
   const outerImageDir = path.resolve(__dirname, '../../../image');
   if (!fs.existsSync(outerImageDir)) {
     fs.mkdirSync(outerImageDir, { recursive: true });

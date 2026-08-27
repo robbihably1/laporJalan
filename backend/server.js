@@ -17,8 +17,18 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Serve uploaded static image files (outer image directory containing profil and lampiran)
-const outerImageDir = path.resolve(__dirname, '../../image');
+const fs = require('fs');
+
+// Serve uploaded static image files (supports project public/image directory)
+const getImageDir = () => {
+  const publicDir = path.resolve(__dirname, '../public/image');
+  if (fs.existsSync(publicDir)) return publicDir;
+  const projectDir = path.resolve(__dirname, '../image');
+  if (fs.existsSync(projectDir)) return projectDir;
+  return path.resolve(__dirname, '../../image');
+};
+
+const outerImageDir = getImageDir();
 app.use('/image', express.static(outerImageDir));
 app.use('/uploads', express.static(path.join(outerImageDir, 'lampiran')));
 
