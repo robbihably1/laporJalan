@@ -19,12 +19,13 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Enable CORS
+// Enable CORS & OPTIONS Preflight
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+app.options('*', cors());
 
 // Static Image serving (supports project public/image directory & Vercel /tmp)
 const getImageDir = () => {
