@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS admin (
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'admin',
+    avatar TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
