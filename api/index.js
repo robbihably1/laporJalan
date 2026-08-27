@@ -28,7 +28,33 @@ app.use(cors({
 
 import os from 'os';
 
-// Static Image serving (supports project public/image directory & Vercel temp dir)
+// Dynamic Image Serving Route (Runtime lookup for public/image, project image, and OS temp dir)
+app.get(['/image/:folder/:filename', '/uploads/:filename'], (req, res) => {
+  const folder = req.params.folder || 'lampiran';
+  const filename = req.params.filename;
+
+  // 1. Check in public/image/folder/filename
+  const publicPath = path.resolve(__dirname, '../public/image', folder, filename);
+  if (fs.existsSync(publicPath)) {
+    return res.sendFile(publicPath);
+  }
+
+  // 2. Check in image/folder/filename (project root)
+  const projectPath = path.resolve(__dirname, '../image', folder, filename);
+  if (fs.existsSync(projectPath)) {
+    return res.sendFile(projectPath);
+  }
+
+  // 3. Check in OS Temp dir (os.tmpdir()/image/folder/filename)
+  const tmpPath = path.join(os.tmpdir(), 'image', folder, filename);
+  if (fs.existsSync(tmpPath)) {
+    return res.sendFile(tmpPath);
+  }
+
+  return res.status(404).json({ success: false, message: 'File gambar tidak ditemukan' });
+});
+
+// Express Static Serving Fallback
 const getImageDir = () => {
   const publicImage = path.resolve(__dirname, '../public/image');
   if (fs.existsSync(publicImage)) return publicImage;
@@ -40,14 +66,6 @@ const getImageDir = () => {
 const imageDir = getImageDir();
 app.use('/image', express.static(imageDir));
 app.use('/uploads', express.static(path.join(imageDir, 'lampiran')));
-
-if (process.env.VERCEL) {
-  const tmpImage = path.join(os.tmpdir(), 'image');
-  if (fs.existsSync(tmpImage)) {
-    app.use('/image', express.static(tmpImage));
-    app.use('/uploads', express.static(path.join(tmpImage, 'lampiran')));
-  }
-}
 
 // Body Parsers
 app.use(express.json({ limit: '10mb' }));

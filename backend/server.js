@@ -17,7 +17,24 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-const fs = require('fs');
+const os = require('os');
+
+// Dynamic Image Serving Route (Runtime lookup for public/image, project image, and OS temp dir)
+app.get(['/image/:folder/:filename', '/uploads/:filename'], (req, res) => {
+  const folder = req.params.folder || 'lampiran';
+  const filename = req.params.filename;
+
+  const publicPath = path.resolve(__dirname, '../public/image', folder, filename);
+  if (fs.existsSync(publicPath)) return res.sendFile(publicPath);
+
+  const projectPath = path.resolve(__dirname, '../image', folder, filename);
+  if (fs.existsSync(projectPath)) return res.sendFile(projectPath);
+
+  const tmpPath = path.join(os.tmpdir(), 'image', folder, filename);
+  if (fs.existsSync(tmpPath)) return res.sendFile(tmpPath);
+
+  return res.status(404).json({ success: false, message: 'File gambar tidak ditemukan' });
+});
 
 // Serve uploaded static image files (supports project public/image directory)
 const getImageDir = () => {
