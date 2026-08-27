@@ -178,7 +178,7 @@ if (mysqlPool) {
           email VARCHAR(100) UNIQUE NOT NULL,
           password VARCHAR(255) NOT NULL,
           phone VARCHAR(20),
-          avatar TEXT,
+          avatar LONGTEXT,
           province VARCHAR(100),
           city VARCHAR(100),
           district VARCHAR(100),
@@ -198,7 +198,7 @@ if (mysqlPool) {
           location_name VARCHAR(255) NOT NULL,
           latitude DOUBLE NOT NULL,
           longitude DOUBLE NOT NULL,
-          photo_url TEXT,
+          photo_url LONGTEXT,
           status VARCHAR(20) DEFAULT 'Menunggu',
           user_id VARCHAR(50),
           user_name VARCHAR(100),
@@ -213,16 +213,6 @@ if (mysqlPool) {
           status VARCHAR(20) NOT NULL,
           note TEXT,
           timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-      await mysqlPool.query(`
-        CREATE TABLE IF NOT EXISTS images (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          filename VARCHAR(255) NOT NULL,
-          folder VARCHAR(50) NOT NULL DEFAULT 'lampiran',
-          mime_type VARCHAR(100) NOT NULL DEFAULT 'image/jpeg',
-          data LONGTEXT NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
       await mysqlPool.query(`

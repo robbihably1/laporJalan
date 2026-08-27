@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
-    avatar VARCHAR(500),
+    avatar LONGTEXT,
     city VARCHAR(100),
     status ENUM('Aktif', 'Nonaktif') NOT NULL DEFAULT 'Aktif',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS admin (
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'admin',
-    avatar VARCHAR(500),
+    avatar LONGTEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -59,16 +59,6 @@ CREATE TABLE IF NOT EXISTS report_timelines (
     FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 5. Table Images (penyimpanan gambar persisten di database)
--- Gambar disimpan sebagai base64 agar tidak hilang saat deploy ulang di Vercel
-CREATE TABLE IF NOT EXISTS images (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    filename VARCHAR(255) NOT NULL,
-    folder VARCHAR(50) NOT NULL DEFAULT 'lampiran',
-    mime_type VARCHAR(100) NOT NULL DEFAULT 'image/jpeg',
-    data LONGTEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- SEED ADMIN & USER
 INSERT INTO admin (id, name, email, password, role)
