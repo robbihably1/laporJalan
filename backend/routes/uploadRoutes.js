@@ -5,8 +5,18 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-// Helper to get image storage path for local development
+// Initialize global image memory cache
+if (!global.IMAGE_CACHE) {
+  global.IMAGE_CACHE = new Map();
+}
+
+// Helper to get image storage path for local development & Vercel
 const getImageBaseDir = () => {
+  if (process.env.VERCEL) {
+    const tmpDir = path.join(os.tmpdir(), 'image');
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+    return tmpDir;
+  }
   const publicDir = path.resolve(__dirname, '../../public/image');
   if (fs.existsSync(publicDir)) return publicDir;
   const projectDir = path.resolve(__dirname, '../../image');
@@ -30,36 +40,36 @@ const getLampiranDir = () => {
   return dir;
 };
 
-// Use memoryStorage on Vercel to avoid disk isolation across Lambda containers
-const storageStrategy = process.env.VERCEL
-  ? multer.memoryStorage()
-  : multer.diskStorage({
-      destination: (req, file, cb) => {
-        const targetDir = file.fieldname === 'avatar' || req.originalUrl.includes('profil')
-          ? getProfilDir()
-          : getLampiranDir();
-        cb(null, targetDir);
-      },
-      filename: (req, file, cb) => {
-        const prefix = file.fieldname === 'avatar' || req.originalUrl.includes('profil') ? 'profile-' : 'lampiran-';
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname) || '.jpg';
-        cb(null, prefix + uniqueSuffix + ext);
-      }
-    });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
 
-const upload = multer({ storage: storageStrategy, limits: { fileSize: 10 * 1024 * 1024 } });
+// Helper to save file & return clean relative URL (/image/profil/profile-xxx.jpg)
+const saveUploadedFile = (uploadedFile, folderName) => {
+  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+  const ext = path.extname(uploadedFile.originalname) || '.jpg';
+  const prefix = folderName === 'profil' ? 'profile-' : 'lampiran-';
+  const filename = prefix + uniqueSuffix + ext;
 
-// Helper to format response URL (Data URL for Vercel, Relative Path for Local)
-const formatUploadResponse = (uploadedFile, folderName) => {
-  if (process.env.VERCEL) {
-    const mime = uploadedFile.mimetype || 'image/jpeg';
-    const base64Str = uploadedFile.buffer
-      ? uploadedFile.buffer.toString('base64')
-      : fs.readFileSync(uploadedFile.path).toString('base64');
-    return `data:${mime};base64,${base64Str}`;
+  const targetDir = folderName === 'profil' ? getProfilDir() : getLampiranDir();
+  const filePath = path.join(targetDir, filename);
+
+  try {
+    fs.writeFileSync(filePath, uploadedFile.buffer);
+  } catch (e) {
+    console.warn("Write file notice:", e.message);
   }
-  return `/image/${folderName}/${uploadedFile.filename}`;
+
+  const relativeUrl = `/image/${folderName}/${filename}`;
+  if (global.IMAGE_CACHE) {
+    global.IMAGE_CACHE.set(relativeUrl, {
+      buffer: uploadedFile.buffer,
+      mimeType: uploadedFile.mimetype || 'image/jpeg'
+    });
+  }
+
+  return { relativeUrl, filename };
 };
 
 // 1. Upload Profile Photo: POST /api/upload/profil
@@ -72,12 +82,12 @@ router.post('/profil', (req, res) => {
     if (!uploadedFile) {
       return res.status(400).json({ success: false, message: 'Tidak ada file foto profil yang diunggah!' });
     }
-    const photoUrl = formatUploadResponse(uploadedFile, 'profil');
+    const { relativeUrl, filename } = saveUploadedFile(uploadedFile, 'profil');
     return res.json({
       success: true,
       message: 'Foto profil berhasil diunggah!',
-      url: photoUrl,
-      filename: uploadedFile.filename || 'profile.jpg'
+      url: relativeUrl,
+      filename
     });
   });
 });
@@ -92,12 +102,12 @@ router.post('/lampiran', (req, res) => {
     if (!uploadedFile) {
       return res.status(400).json({ success: false, message: 'Tidak ada file lampiran yang diunggah!' });
     }
-    const photoUrl = formatUploadResponse(uploadedFile, 'lampiran');
+    const { relativeUrl, filename } = saveUploadedFile(uploadedFile, 'lampiran');
     return res.json({
       success: true,
       message: 'Lampiran foto berhasil diunggah!',
-      url: photoUrl,
-      filename: uploadedFile.filename || 'lampiran.jpg'
+      url: relativeUrl,
+      filename
     });
   });
 });
@@ -112,12 +122,12 @@ router.post('/', (req, res) => {
     if (!uploadedFile) {
       return res.status(400).json({ success: false, message: 'Tidak ada file foto yang diunggah!' });
     }
-    const photoUrl = formatUploadResponse(uploadedFile, 'lampiran');
+    const { relativeUrl, filename } = saveUploadedFile(uploadedFile, 'lampiran');
     return res.json({
       success: true,
       message: 'Foto berhasil diunggah!',
-      url: photoUrl,
-      filename: uploadedFile.filename || 'photo.jpg'
+      url: relativeUrl,
+      filename
     });
   });
 });

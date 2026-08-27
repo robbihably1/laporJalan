@@ -19,10 +19,18 @@ app.use(cors({
 
 const os = require('os');
 
-// Dynamic Image Serving Route (Runtime lookup for public/image, project image, and OS temp dir)
+// Dynamic Image Serving Route (Runtime lookup for IMAGE_CACHE, public/image, project image, and OS temp dir)
 app.get(['/image/:folder/:filename', '/uploads/:filename'], (req, res) => {
   const folder = req.params.folder || 'lampiran';
   const filename = req.params.filename;
+  const relativeUrl = `/image/${folder}/${filename}`;
+
+  if (global.IMAGE_CACHE && global.IMAGE_CACHE.has(relativeUrl)) {
+    const cached = global.IMAGE_CACHE.get(relativeUrl);
+    res.setHeader('Content-Type', cached.mimeType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.send(cached.buffer);
+  }
 
   const publicPath = path.resolve(__dirname, '../public/image', folder, filename);
   if (fs.existsSync(publicPath)) return res.sendFile(publicPath);

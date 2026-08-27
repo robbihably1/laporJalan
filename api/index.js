@@ -28,24 +28,33 @@ app.use(cors({
 
 import os from 'os';
 
-// Dynamic Image Serving Route (Runtime lookup for public/image, project image, and OS temp dir)
+// Dynamic Image Serving Route (Runtime lookup for IMAGE_CACHE, public/image, project image, and OS temp dir)
 app.get(['/image/:folder/:filename', '/uploads/:filename'], (req, res) => {
   const folder = req.params.folder || 'lampiran';
   const filename = req.params.filename;
+  const relativeUrl = `/image/${folder}/${filename}`;
 
-  // 1. Check in public/image/folder/filename
+  // 1. Check in global memory IMAGE_CACHE
+  if (global.IMAGE_CACHE && global.IMAGE_CACHE.has(relativeUrl)) {
+    const cached = global.IMAGE_CACHE.get(relativeUrl);
+    res.setHeader('Content-Type', cached.mimeType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.send(cached.buffer);
+  }
+
+  // 2. Check in public/image/folder/filename
   const publicPath = path.resolve(__dirname, '../public/image', folder, filename);
   if (fs.existsSync(publicPath)) {
     return res.sendFile(publicPath);
   }
 
-  // 2. Check in image/folder/filename (project root)
+  // 3. Check in image/folder/filename (project root)
   const projectPath = path.resolve(__dirname, '../image', folder, filename);
   if (fs.existsSync(projectPath)) {
     return res.sendFile(projectPath);
   }
 
-  // 3. Check in OS Temp dir (os.tmpdir()/image/folder/filename)
+  // 4. Check in OS Temp dir (os.tmpdir()/image/folder/filename)
   const tmpPath = path.join(os.tmpdir(), 'image', folder, filename);
   if (fs.existsSync(tmpPath)) {
     return res.sendFile(tmpPath);
