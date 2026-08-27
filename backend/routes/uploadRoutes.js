@@ -34,14 +34,12 @@ router.post('/', upload.single('photo'), (req, res) => {
       return res.status(400).json({ success: false, message: 'Tidak ada file foto yang diunggah!' });
     }
 
-    const host = req.get('host') || 'localhost:5000';
-    const protocol = req.protocol || 'http';
-    const fileUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+    const relativeUrl = `/uploads/${req.file.filename}`;
 
     return res.json({
       success: true,
       message: 'Foto berhasil diunggah!',
-      url: fileUrl,
+      url: relativeUrl,
       filename: req.file.filename
     });
   } catch (error) {

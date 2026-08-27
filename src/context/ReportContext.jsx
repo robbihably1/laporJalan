@@ -14,13 +14,26 @@ export const ReportProvider = ({ children }) => {
     setTimeout(() => setToast(null), 4000);
   };
 
+  // Helper to sanitize photo URLs
+  const cleanPhotoUrl = (url) => {
+    if (!url) return '';
+    if (typeof url === 'string') {
+      return url.replace(/^https?:\/\/localhost:\d+/i, '');
+    }
+    return url;
+  };
+
   // Fetch reports from Backend API
   const fetchReports = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await reportsApi.getAll();
       if (response && response.data && Array.isArray(response.data)) {
-        setReports(response.data);
+        const sanitized = response.data.map(r => ({
+          ...r,
+          photoUrl: cleanPhotoUrl(r.photoUrl)
+        }));
+        setReports(sanitized);
       } else {
         setReports([]);
       }

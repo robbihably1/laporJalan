@@ -62,6 +62,14 @@ let MOCK_REPORTS = [
   }
 ];
 
+function cleanPhotoUrl(url) {
+  if (!url) return '';
+  if (typeof url === 'string') {
+    return url.replace(/^https?:\/\/localhost:\d+/i, '');
+  }
+  return url;
+}
+
 // Helper to format DB rows
 function formatDbReport(row, timelines = []) {
   return {
@@ -74,7 +82,7 @@ function formatDbReport(row, timelines = []) {
     locationName: row.location_name,
     latitude: parseFloat(row.latitude),
     longitude: parseFloat(row.longitude),
-    photoUrl: row.photo_url,
+    photoUrl: cleanPhotoUrl(row.photo_url),
     status: row.status,
     createdAt: row.created_at,
     userName: row.user_name || 'Masyarakat',
