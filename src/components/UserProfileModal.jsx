@@ -72,24 +72,67 @@ export default function UserProfileModal({ onClose }) {
 
   if (!user) return null;
 
-  // Handle Avatar Upload
+  // Helper to compress avatar image client-side before sending
+  const compressAvatar = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 400; // 400px max dimension for square avatar
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          resolve(dataUrl);
+        };
+        img.onerror = () => resolve(e.target.result);
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle Avatar Upload with Clean Compression
   const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setIsUploading(true);
     try {
-      const res = await uploadApi.uploadPhoto(file);
-      if (res && res.url) {
-        setAvatar(res.url);
+      // 1. Compress avatar image client-side first
+      const compressedDataUrl = await compressAvatar(file);
+      setAvatar(compressedDataUrl);
+
+      // 2. Try server upload endpoint if available
+      try {
+        const res = await uploadApi.uploadPhoto(file);
+        if (res && res.url) {
+          setAvatar(res.url);
+        }
+      } catch (err) {
+        console.warn("Avatar server upload notice, using compressed Data URL:", err.message);
       }
     } catch (err) {
-      console.warn("Avatar upload warning, fallback to local data:", err.message);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatar(reader.result);
-      };
-      reader.readAsDataURL(file);
+      console.warn("Avatar processing error:", err.message);
     } finally {
       setIsUploading(false);
     }

@@ -1,5 +1,4 @@
 const path = require('path');
-const fs = require('fs');
 const mysql = require('mysql2/promise');
 const dotenv = require('dotenv');
 
@@ -9,36 +8,7 @@ dotenv.config();
 // Check if running on Vercel Serverless Environment or Production
 const isVercel = !!process.env.VERCEL;
 
-const sourceDbPath = path.join(__dirname, '../db/lapor_jalan.sqlite');
-
-// On Vercel Serverless, use writable /tmp directory; otherwise use local db file path
-const dbPath = isVercel 
-  ? path.join('/tmp', 'lapor_jalan.sqlite') 
-  : sourceDbPath;
-
-const schemaPath = path.join(__dirname, '../db/schema_sqlite.sql');
-
-// Ensure db directory exists & copy source SQLite file if running in Serverless (/tmp)
-try {
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
-
-  // Copy pre-populated lapor_jalan.sqlite file to writable /tmp directory if needed
-  if (isVercel && fs.existsSync(sourceDbPath) && dbPath !== sourceDbPath) {
-    if (!fs.existsSync(dbPath) || fs.statSync(dbPath).size === 0) {
-      fs.copyFileSync(sourceDbPath, dbPath);
-      console.log(' Successfully copied seed lapor_jalan.sqlite database to:', dbPath);
-    }
-  }
-} catch (err) {
-  console.warn("Notice on DB file/directory setup:", err.message);
-}
-
 let mysqlPool = null;
-let dbInstance = null;
-let isSqliteReady = false;
 
 // Default hashed password for fallback ('123456')
 const DEFAULT_HASHED_PASS = '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW';
@@ -336,43 +306,6 @@ if (mysqlPool) {
   })();
 }
 
-// 2. Try SQLite Driver with safe fallback
-if (!mysqlPool) {
-  try {
-    const Database = require('better-sqlite3');
-    const dbFileExists = fs.existsSync(dbPath) && fs.statSync(dbPath).size > 0;
-    dbInstance = new Database(dbPath, { timeout: 5000 });
-
-    try {
-      dbInstance.pragma('journal_mode = WAL');
-    } catch (walErr) {
-      console.warn("WAL pragma notice:", walErr.message);
-    }
-
-    if (!dbFileExists && fs.existsSync(schemaPath)) {
-      const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
-      dbInstance.exec(schemaSql);
-    }
-    isSqliteReady = true;
-    console.log(' Connected to SQLite Database at:', dbPath);
-  } catch (e) {
-    console.warn(' Notice on better-sqlite3, trying sqlite3 fallback:', e.message);
-    try {
-      const sqlite3 = require('sqlite3').verbose();
-      const db = new sqlite3.Database(dbPath);
-      const dbFileExists = fs.existsSync(dbPath) && fs.statSync(dbPath).size > 0;
-      if (!dbFileExists && fs.existsSync(schemaPath)) {
-        const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
-        db.exec(schemaSql);
-      }
-      console.log(' Connected to SQLite via sqlite3 driver!');
-      isSqliteReady = true;
-    } catch (err2) {
-      console.warn(' SQLite driver notice:', err2.message);
-    }
-  }
-}
-
 // Universal query helper method
 async function query(sql, params = []) {
   if (mysqlPool) {
@@ -381,24 +314,6 @@ async function query(sql, params = []) {
       return [rows];
     } catch (err) {
       console.warn("MySQL Query Error:", err.message);
-      throw err;
-    }
-  }
-
-  if (dbInstance) {
-    try {
-      const trimmedSql = sql.trim().toUpperCase();
-      if (trimmedSql.startsWith('SELECT')) {
-        const stmt = dbInstance.prepare(sql);
-        const rows = stmt.all(...params);
-        return [rows];
-      } else {
-        const stmt = dbInstance.prepare(sql);
-        const info = stmt.run(...params);
-        return [info];
-      }
-    } catch (err) {
-      console.warn("SQLite Query Error:", err.message, "SQL:", sql);
       throw err;
     }
   }
@@ -474,6 +389,22 @@ async function query(sql, params = []) {
       role: 'user'
     };
     MEMORY_USERS.push(newUser);
+    return [{ affectedRows: 1 }];
+  }
+
+  if (sqlUpper.includes("UPDATE USERS SET NAME") || (sqlUpper.includes("UPDATE USERS") && sqlUpper.includes("AVATAR"))) {
+    const targetId = params[params.length - 1];
+    const user = MEMORY_USERS.find(u => u.id === targetId || u.email === targetId);
+    if (user) {
+      user.name = params[0] || user.name;
+      user.nik = params[1] !== undefined ? params[1] : user.nik;
+      user.phone = params[2] !== undefined ? params[2] : user.phone;
+      user.province = params[3] || user.province;
+      user.city = params[4] || user.city;
+      user.district = params[5] || user.district;
+      user.village = params[6] || user.village;
+      user.avatar = params[7] || user.avatar;
+    }
     return [{ affectedRows: 1 }];
   }
 
@@ -591,13 +522,11 @@ async function query(sql, params = []) {
 }
 
 async function checkConnection() {
-  return isSqliteReady || !!mysqlPool || isVercel;
+  return !!mysqlPool || isVercel;
 }
 
 module.exports = {
   pool: { query },
-  dbInstance,
-  dbPath,
   checkConnection,
   MEMORY_USERS,
   DELETED_USERS_SET

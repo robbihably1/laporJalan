@@ -208,7 +208,7 @@ exports.login = async (req, res) => {
             id: adminObj.id,
             name: adminObj.name,
             email: adminObj.email,
-            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+            avatar: adminObj.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
             role: 'admin'
           }
         });
@@ -308,7 +308,7 @@ exports.getMe = async (req, res) => {
               id: adminObj.id,
               name: adminObj.name,
               email: adminObj.email,
-              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+              avatar: adminObj.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
               role: 'admin'
             }
           });
@@ -340,28 +340,72 @@ exports.getMe = async (req, res) => {
 // 6. Update Logged-in User Profile
 exports.updateProfile = async (req, res) => {
   try {
-    const { id, name, nik, phone, province, city, district, village, avatar } = req.body;
+    const { id, email, name, nik, phone, province, city, district, village, avatar } = req.body;
+    const targetKey = id || email;
 
-    if (!id) {
+    if (!targetKey) {
       return res.status(400).json({ success: false, message: 'ID User tidak ditemukan!' });
     }
 
+    const { MEMORY_USERS } = require('../config/db');
+
+    // 1. Try updating users table
     try {
       await pool.query(
-        'UPDATE users SET name = ?, nik = ?, phone = ?, province = ?, city = ?, district = ?, village = ?, avatar = ? WHERE id = ?',
-        [name, nik || '', phone || '', province || 'Jawa Barat', city || 'Kota Bogor', district || '', village || '', avatar || '', id]
+        'UPDATE users SET name = ?, nik = ?, phone = ?, province = ?, city = ?, district = ?, village = ?, avatar = ? WHERE id = ? OR email = ?',
+        [name, nik || '', phone || '', province || 'Jawa Barat', city || 'Kota Bogor', district || '', village || '', avatar || '', targetKey, targetKey]
       );
+    } catch (e) {}
 
-      const [updatedRows] = await pool.query('SELECT id, nik, name, email, phone, avatar, province, city, district, village, status FROM users WHERE id = ?', [id]);
-      if (updatedRows && updatedRows.length > 0) {
-        return res.json({
-          success: true,
-          message: 'Profil Anda berhasil diperbarui!',
-          user: { ...updatedRows[0], role: 'user' }
-        });
+    // 2. Try updating admin table
+    try {
+      await pool.query(
+        'UPDATE admin SET name = ?, avatar = ? WHERE id = ? OR email = ?',
+        [name, avatar || '', targetKey, targetKey]
+      );
+    } catch (e) {}
+
+    // 3. Update MEMORY_USERS if present
+    if (Array.isArray(MEMORY_USERS)) {
+      const memUser = MEMORY_USERS.find(u => u.id === targetKey || u.email === targetKey);
+      if (memUser) {
+        if (name) memUser.name = name;
+        if (nik !== undefined) memUser.nik = nik;
+        if (phone !== undefined) memUser.phone = phone;
+        if (province) memUser.province = province;
+        if (city) memUser.city = city;
+        if (district !== undefined) memUser.district = district;
+        if (village !== undefined) memUser.village = village;
+        if (avatar) memUser.avatar = avatar;
       }
-    } catch (dbErr) {
-      console.warn("DB UpdateProfile Error:", dbErr.message);
+    }
+
+    let updatedUser = null;
+    try {
+      const [uRows] = await pool.query('SELECT id, nik, name, email, phone, avatar, province, city, district, village, status FROM users WHERE id = ? OR email = ?', [targetKey, targetKey]);
+      if (uRows && uRows.length > 0) {
+        updatedUser = { ...uRows[0], role: 'user' };
+      } else {
+        const [aRows] = await pool.query('SELECT id, name, email, avatar FROM admin WHERE id = ? OR email = ?', [targetKey, targetKey]);
+        if (aRows && aRows.length > 0) {
+          updatedUser = { ...aRows[0], role: 'admin' };
+        }
+      }
+    } catch (e) {}
+
+    if (!updatedUser && Array.isArray(MEMORY_USERS)) {
+      const memUser = MEMORY_USERS.find(u => u.id === targetKey || u.email === targetKey);
+      if (memUser) {
+        updatedUser = { ...memUser, role: 'user' };
+      }
+    }
+
+    if (updatedUser) {
+      return res.json({
+        success: true,
+        message: 'Profil Anda berhasil diperbarui!',
+        user: updatedUser
+      });
     }
 
     return res.status(500).json({ success: false, message: 'Gagal memperbarui profil di database.' });
