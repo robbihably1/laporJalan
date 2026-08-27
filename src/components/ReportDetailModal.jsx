@@ -35,10 +35,15 @@ export default function ReportDetailModal({ report, onClose }) {
   const [adminNote, setAdminNote] = useState('');
   const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
 
-  // Check if report belongs to logged-in user or can be edited while status is 'Menunggu'
-  const isOwner = (activeReport?.userId && user?.id && activeReport.userId === user.id) ||
-                  (activeReport?.userName && user?.name && activeReport.userName.toLowerCase() === user.name.toLowerCase());
-  const canEdit = activeReport?.status === 'Menunggu' && (isOwner || !isAdmin);
+  // Check if report belongs to logged-in user (report creator only)
+  const isOwner = Boolean(
+    user && !isAdmin && (
+      (activeReport?.userId && user?.id && String(activeReport.userId) === String(user.id)) ||
+      (activeReport?.userEmail && user?.email && activeReport.userEmail.toLowerCase() === user.email.toLowerCase()) ||
+      (activeReport?.userName && user?.name && activeReport.userName.trim().toLowerCase() === user.name.trim().toLowerCase())
+    )
+  );
+  const canEdit = activeReport?.status === 'Menunggu' && isOwner;
 
   // Sync selected status when report changes
   useEffect(() => {
