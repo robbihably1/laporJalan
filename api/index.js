@@ -19,13 +19,12 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Enable CORS & OPTIONS Preflight
+// Enable CORS
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.options('*', cors());
 
 import os from 'os';
 
