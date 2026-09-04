@@ -58,8 +58,8 @@ export default function EditReportModal({ report, onClose, onUpdated }) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: mode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
         },
         audio: false
       });
@@ -143,7 +143,7 @@ export default function EditReportModal({ report, onClose, onUpdated }) {
         } finally {
           setIsUploadingPhoto(false);
         }
-      }, 'image/jpeg', 0.85);
+      }, 'image/jpeg', 0.90);
 
     } catch (err) {
       setIsCapturing(false);
@@ -291,12 +291,12 @@ export default function EditReportModal({ report, onClose, onUpdated }) {
             </label>
 
             {isUploadingPhoto ? (
-              <div className="h-44 rounded-xl border border-slate-800 bg-slate-900/80 flex flex-col items-center justify-center text-sky-400 space-y-2">
+              <div className="h-56 sm:h-72 rounded-xl border border-slate-800 bg-slate-900/80 flex flex-col items-center justify-center text-sky-400 space-y-2">
                 <Loader2 className="w-6 h-6 animate-spin" />
                 <span className="text-xs font-semibold">Mengunggah & memproses foto kamera...</span>
               </div>
             ) : photoUrl ? (
-              <div className="relative rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900 group h-52 shadow-md">
+              <div className="relative rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900 group h-72 sm:h-80 md:h-96 shadow-md">
                 <img src={photoUrl} alt="Preview Bukti" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2.5 backdrop-blur-xs">
                   <button
@@ -440,11 +440,11 @@ export default function EditReportModal({ report, onClose, onUpdated }) {
 
       {/* LIVE WEBCAM / CAMERA VIEWFINDER MODAL FOR EDIT */}
       {showLiveCamera && (
-        <div className="fixed inset-0 z-[99999] modal-backdrop-overlay bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-xl bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col relative my-auto">
+        <div className="fixed inset-0 z-[99999] modal-backdrop-overlay bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+          <div className="w-full max-w-md sm:max-w-xl bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col relative my-auto">
             
             {/* Header */}
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/70">
+            <div className="p-3.5 sm:p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/70 flex-shrink-0">
               <div className="flex items-center gap-2 text-white text-sm font-bold">
                 <Camera className="w-4 h-4 text-sky-400" />
                 <span>Kamera Langsung - Foto Bukti Fisik</span>
@@ -452,14 +452,14 @@ export default function EditReportModal({ report, onClose, onUpdated }) {
               <button
                 type="button"
                 onClick={stopCamera}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Video Viewfinder */}
-            <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
+            {/* Video Viewfinder - Tall Portrait 3:4 on Mobile / 4:3 on Desktop */}
+            <div className="relative w-full aspect-[3/4] max-h-[62vh] sm:aspect-[4/3] sm:max-h-[460px] bg-black flex items-center justify-center overflow-hidden">
               {cameraError ? (
                 <div className="p-6 text-center text-rose-400 space-y-3">
                   <AlertTriangle className="w-10 h-10 mx-auto text-rose-500" />
@@ -482,12 +482,12 @@ export default function EditReportModal({ report, onClose, onUpdated }) {
                     className="w-full h-full object-cover"
                   />
                   {/* Camera Target Crosshairs */}
-                  <div className="absolute inset-8 border border-white/25 rounded-2xl pointer-events-none flex items-center justify-center">
-                    <div className="w-12 h-12 border-t-2 border-l-2 border-sky-400 absolute top-0 left-0 rounded-tl-xl"></div>
-                    <div className="w-12 h-12 border-t-2 border-r-2 border-sky-400 absolute top-0 right-0 rounded-tr-xl"></div>
-                    <div className="w-12 h-12 border-b-2 border-l-2 border-sky-400 absolute bottom-0 left-0 rounded-bl-xl"></div>
-                    <div className="w-12 h-12 border-b-2 border-r-2 border-sky-400 absolute bottom-0 right-0 rounded-br-xl"></div>
-                    <span className="text-[11px] text-white/70 bg-black/50 px-2.5 py-1 rounded-full backdrop-blur-xs">
+                  <div className="absolute inset-4 sm:inset-6 border border-white/25 rounded-2xl pointer-events-none flex items-center justify-center">
+                    <div className="w-8 h-8 sm:w-12 sm:h-12 border-t-2 border-l-2 border-sky-400 absolute top-0 left-0 rounded-tl-xl"></div>
+                    <div className="w-8 h-8 sm:w-12 sm:h-12 border-t-2 border-r-2 border-sky-400 absolute top-0 right-0 rounded-tr-xl"></div>
+                    <div className="w-8 h-8 sm:w-12 sm:h-12 border-b-2 border-l-2 border-sky-400 absolute bottom-0 left-0 rounded-bl-xl"></div>
+                    <div className="w-8 h-8 sm:w-12 sm:h-12 border-b-2 border-r-2 border-sky-400 absolute bottom-0 right-0 rounded-br-xl"></div>
+                    <span className="text-[11px] text-white/80 bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10 shadow-lg text-center mx-4">
                       Arahkan kamera ke titik kerusakan jalan
                     </span>
                   </div>
