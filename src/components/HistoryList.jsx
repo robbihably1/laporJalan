@@ -575,27 +575,14 @@ export default function HistoryList({ onAddNewReport }) {
                 <span className="truncate">Lampiran Foto - {previewPhotoReport.id}</span>
               </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <a
-                  href={previewPhotoReport.photoUrl || previewPhotoReport.image}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold flex items-center gap-1.5 border border-slate-700 shadow-md transition-all active:scale-95 flex-shrink-0"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Buka Tab Baru</span>
-                </a>
-
-                {/* Clean Slate Close Button matching User View */}
-                <button
-                  onClick={() => setPreviewPhotoReport(null)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0 flex items-center justify-center border border-slate-700/60"
-                  title="Tutup Preview Foto"
-                  aria-label="Tutup"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                onClick={() => setPreviewPhotoReport(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0 flex items-center justify-center cursor-pointer"
+                title="Tutup Preview Foto"
+                aria-label="Tutup"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {/* Image Viewer Container */}

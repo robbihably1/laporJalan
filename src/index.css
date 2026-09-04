@@ -296,11 +296,25 @@
 .light-theme a.bg-emerald-500,
 .light-theme a.bg-indigo-600,
 .light-theme a.bg-indigo-500,
-.light-theme button[type="submit"],
-.light-theme button.btn-primary {
+.light-theme button[type="submit"]:not(:disabled),
+.light-theme button.btn-primary:not(:disabled) {
   background-color: #059669 !important;
   color: #ffffff !important;
   border-color: #047857 !important;
+}
+
+.light-theme button[type="submit"]:disabled,
+.light-theme button:disabled {
+  background-color: #e2e8f0 !important;
+  color: #64748b !important;
+  border-color: #cbd5e1 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
+.light-theme button[type="submit"]:disabled *,
+.light-theme button:disabled * {
+  color: #64748b !important;
 }
 
 .light-theme button.bg-sky-500:hover,
@@ -313,7 +327,7 @@
 .light-theme a.bg-emerald-500:hover,
 .light-theme a.bg-indigo-600:hover,
 .light-theme a.bg-indigo-500:hover,
-.light-theme button[type="submit"]:hover {
+.light-theme button[type="submit"]:not(:disabled):hover {
   background-color: #047857 !important;
   color: #ffffff !important;
 }
