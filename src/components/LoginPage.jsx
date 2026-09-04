@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../services/api';
-import { MapPin, ArrowRight, CheckCircle2, Sparkles, AlertTriangle, Camera } from 'lucide-react';
+import { MapPin, ArrowRight, CheckCircle2, Sparkles, AlertTriangle, Camera, Clock } from 'lucide-react';
 import Logo from './Logo';
 
 export default function LoginPage({ onSwitchToRegister }) {
-  const { login } = useAuth();
+  const { login, sessionNotice, clearSessionNotice } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -119,6 +119,24 @@ export default function LoginPage({ onSwitchToRegister }) {
               <h2 className="text-2xl font-bold text-white">Masuk Akun</h2>
               <p className="text-slate-400 text-xs mt-1">Silakan masuk untuk mulai menggunakan portal pelaporan</p>
             </div>
+
+            {/* Session Expiry Notification Alert */}
+            {sessionNotice && !errorMessage && (
+              <div className="p-4 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-start gap-3">
+                <Clock className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 leading-relaxed">
+                  {sessionNotice}
+                </div>
+                <button
+                  type="button"
+                  onClick={clearSessionNotice}
+                  className="text-amber-400/80 hover:text-amber-200 text-sm ml-1 leading-none"
+                  title="Tutup pemberitahuan"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
 
             {/* Error Notification Alert */}
             {errorMessage && (

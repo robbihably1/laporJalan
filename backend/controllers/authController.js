@@ -199,11 +199,12 @@ exports.login = async (req, res) => {
           return res.status(401).json({ success: false, message: 'Kata sandi Administrator salah!' });
         }
 
-        const token = jwt.sign({ id: adminObj.id, email: adminObj.email, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ id: adminObj.id, email: adminObj.email, role: 'admin' }, JWT_SECRET, { expiresIn: '8h' });
         return res.json({
           success: true,
           message: 'Login Administrator Berhasil!',
           token,
+          expiresIn: 28800, // 8 jam dalam detik
           user: {
             id: adminObj.id,
             name: adminObj.name,
@@ -249,12 +250,13 @@ exports.login = async (req, res) => {
           }
         }
 
-        const token = jwt.sign({ id: user.id, email: user.email, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ id: user.id, email: user.email, role: 'user' }, JWT_SECRET, { expiresIn: '8h' });
 
         return res.json({
           success: true,
           message: 'Login berhasil!',
           token,
+          expiresIn: 28800, // 8 jam dalam detik
           user: {
             id: user.id,
             nik: user.nik,

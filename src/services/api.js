@@ -39,6 +39,14 @@ async function fetchApi(endpoint, options = {}) {
 
     const data = await response.json();
     if (!response.ok) {
+      // If 401 Unauthorized occurs on authenticated endpoints, notify app of session expiration
+      if (response.status === 401 && !endpoint.includes('/login') && !endpoint.includes('/register')) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('laporjalan:session_expired', {
+            detail: { message: data.message || 'Sesi Anda telah berakhir setelah 8 jam. Silakan masuk kembali.' }
+          }));
+        }
+      }
       throw new Error(data.message || 'Gagal memproses permintaan API');
     }
     return data;
